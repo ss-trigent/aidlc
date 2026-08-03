@@ -84,7 +84,17 @@ Update the plugin in Claude Code (`/plugin` → update, or reinstall), then run 
 
 ## Working from Cursor, opencode, or GitHub Copilot
 
-Nothing to install. The scaffold pins the personas into the repository for every editor ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md)): Cursor users get `/ba`, `/dev` etc. as commands plus skills and delegatable agents under `.cursor/`; opencode reads `.opencode/`; Copilot reads `.github/` prompts, skills and agents. All of them are generated from the same `.claude/` sources by `tools/aidlc-build-surfaces.mjs` and drift-checked in CI, so a teammate on Cursor and one on Claude Code are always running the identical persona.
+Nothing to install. The scaffold pins the personas into the repository for every editor ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md)) — cloning the adopted repo **is** the install:
+
+| Editor | Reads | Start a persona |
+| --- | --- | --- |
+| Cursor | `.cursor/commands`, `.cursor/skills`, `.cursor/agents` | type `/ba`, `/dev`, … in the chat input; the `aidlc-*` agents are delegatable |
+| opencode | `.opencode/commands`, `.opencode/skills`, `.opencode/agents` | type `/ba`, `/dev`, … |
+| GitHub Copilot (VS Code) | `.github/prompts`, `.github/skills`, `.github/agents` | type `/ba`, `/dev`, … in Copilot Chat (prompt files) |
+
+All of these are generated from the same `.claude/` sources by `tools/aidlc-build-surfaces.mjs` and drift-checked in CI (check 13), so a teammate on Cursor and one on Claude Code are always running the identical persona.
+
+**Team with no Claude Code at all?** You can bootstrap without the plugin: clone [`ss-trigent/aidlc`](https://github.com/ss-trigent/aidlc), then in your target repo have your editor's AI agent follow `packages/aidlc-plugin/skills/aidlc-init/SKILL.md` from the clone, reading `$CLAUDE_PLUGIN_ROOT` as the clone's `packages/aidlc-plugin` directory. The steps are plain shell plus the interview — the result is identical to a plugin-driven scaffold, and `aidlc-check` verifies it the same way.
 
 Two things remain Claude Code–only, deliberately: the `/aidlc-init` scaffold and upgrade flow (it needs the plugin's bundled payload), and tool-level enforcement of the read-only personas — Cursor and Copilot can't restrict an agent's tools, so there Architect and Manager carry an injected read-only notice and the charter rule stands on the model. The gates never move with the editor either way: approval is a GitHub PR review and `aidlc-check` is the required status no matter which assistant drafted the work.
 

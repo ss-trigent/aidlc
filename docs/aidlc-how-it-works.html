@@ -1,0 +1,1301 @@
+<title>AI-DLC — How the Whole Thing Works</title>
+
+<style>
+  :root {
+    /* Built from the product's own design tokens — the framework's Gate 1
+       artifact is this palette, so the page runs on it. */
+    --ink: #0a1416;
+    --ink-2: #263c40;
+    --paper: #eef2f2;
+    --surface: #ffffff;
+    --surface-2: #e2eaea;
+    --line: #c6d4d4;
+    --line-2: #a8bcbc;
+    --muted: #5b7275;
+    /* Large numerals read as quiet but must still clear 3:1. --line-2 does not. */
+    --numeral: #6d8786;
+
+    --teal: #0b5c5c;
+    --teal-ink: #ffffff;
+    --teal-soft: #d8e8e7;
+    --wash: rgba(255, 255, 255, 0.18);
+
+    --green: #16653c;
+    --green-soft: #dcece2;
+    --rust: #9a2e26;
+    --rust-soft: #f3e2e0;
+    --amber: #8f5f0d;
+    --amber-soft: #f6ecd6;
+
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+    --measure: 70ch;
+    --r: 3px;
+    --rail: 168px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e4eded; --ink-2: #b4c8c8; --paper: #081113;
+      --surface: #10201f; --surface-2: #172a29;
+      --line: #24413f; --line-2: #366059; --muted: #86a09f; --numeral: #5c8f89;
+      --teal: #48b3a9; --teal-ink: #04201d; --teal-soft: #10312e;
+      --wash: rgba(0, 0, 0, 0.16);
+      --green: #4fbd7f; --green-soft: #0f2b1d;
+      --rust: #e0867c; --rust-soft: #2e1917;
+      --amber: #d09c3c; --amber-soft: #2a2112;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e4eded; --ink-2: #b4c8c8; --paper: #081113;
+    --surface: #10201f; --surface-2: #172a29;
+    --line: #24413f; --line-2: #366059; --muted: #86a09f; --numeral: #5c8f89;
+    --teal: #48b3a9; --teal-ink: #04201d; --teal-soft: #10312e;
+    --wash: rgba(0, 0, 0, 0.16);
+    --green: #4fbd7f; --green-soft: #0f2b1d;
+    --rust: #e0867c; --rust-soft: #2e1917;
+    --amber: #d09c3c; --amber-soft: #2a2112;
+  }
+  :root[data-theme="light"] {
+    --ink: #0a1416; --ink-2: #263c40; --paper: #eef2f2;
+    --surface: #ffffff; --surface-2: #e2eaea;
+    --line: #c6d4d4; --line-2: #a8bcbc; --muted: #5b7275; --numeral: #6d8786;
+    --teal: #0b5c5c; --teal-ink: #ffffff; --teal-soft: #d8e8e7;
+    --wash: rgba(255, 255, 255, 0.18);
+    --green: #16653c; --green-soft: #dcece2;
+    --rust: #9a2e26; --rust-soft: #f3e2e0;
+    --amber: #8f5f0d; --amber-soft: #f6ecd6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ================= masthead ================= */
+  .masthead { background: #071417; color: #dcebea; border-bottom: 4px solid var(--teal); }
+  .mast-inner { max-width: 1180px; margin: 0 auto; padding: 38px 28px 42px; }
+  .stamp {
+    display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #6f9490; margin: 0 0 36px;
+  }
+  .stamp .tag {
+    color: #071417; background: #48b3a9; padding: 4px 9px;
+    border-radius: var(--r); letter-spacing: 0.12em; font-weight: 600;
+  }
+  .stamp .sep { color: #2b4a4c; }
+  .masthead h1 {
+    font-weight: 800; font-size: clamp(2rem, 5.2vw, 3.7rem); line-height: 1.03;
+    letter-spacing: -0.035em; text-wrap: balance; max-width: 24ch;
+    margin: 0 0 24px; color: #f2fbfa;
+  }
+  .masthead h1 em { font-style: normal; color: #48b3a9; }
+  .standfirst { font-size: 1.14rem; line-height: 1.6; color: #a8c6c3; max-width: 66ch; margin: 0; }
+  .standfirst strong { color: #e4f2f1; font-weight: 600; }
+  .masthead code { background: rgba(255,255,255,0.14); color: #eaf7f6; }
+
+  .band {
+    max-width: 1180px; margin: 0 auto; padding: 0 28px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+    transform: translateY(-1px);
+  }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-left-width: 0; padding: 16px 16px 18px; }
+  .stat:first-child { border-left-width: 1px; }
+  .stat dt {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 9px;
+  }
+  .stat dd {
+    margin: 0; font-family: var(--mono); font-size: 2.1rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.03em; color: var(--teal);
+  }
+  .stat dd small {
+    display: block; font-family: var(--sans); font-size: 0.76rem; font-weight: 400;
+    letter-spacing: 0; color: var(--muted); margin-top: 9px; line-height: 1.4;
+  }
+
+  /* ================= layout ================= */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 110px; }
+  section { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 0 40px; padding: 62px 0 0; }
+  .rail-sticky { position: sticky; top: 24px; }
+  .rail .no {
+    font-family: var(--mono); font-size: 1.9rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1; color: var(--numeral);
+    letter-spacing: -0.04em; display: block;
+  }
+  .rail .lbl {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--muted); margin-top: 10px; display: block;
+  }
+
+  .body h2 {
+    font-weight: 800; font-size: clamp(1.45rem, 2.6vw, 1.95rem); line-height: 1.12;
+    letter-spacing: -0.028em; text-wrap: balance; margin: -6px 0 18px; max-width: 32ch;
+  }
+  .body h3 {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--teal); margin: 40px 0 14px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  .body p { max-width: var(--measure); margin: 0 0 15px; }
+  .body p:last-child { margin-bottom: 0; }
+  .lede { font-size: 1.13rem; line-height: 1.58; color: var(--ink-2); max-width: 64ch; }
+
+  a { color: var(--teal); }
+  code, .mono { font-family: var(--mono); }
+  code { font-size: 0.86em; background: var(--surface-2); padding: 0.12em 0.4em; border-radius: var(--r); word-break: break-word; }
+
+  /* ---- chips ---- */
+  .chip {
+    display: inline-block; font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: 0.09em; text-transform: uppercase; padding: 4px 8px;
+    border-radius: var(--r); white-space: nowrap; font-weight: 600;
+  }
+  .k-ok { color: var(--green); background: var(--green-soft); }
+  .k-warn { color: var(--amber); background: var(--amber-soft); }
+  .k-err { color: var(--rust); background: var(--rust-soft); }
+  .k-nil { color: var(--muted); background: var(--surface-2); }
+  .k-teal { color: var(--teal); background: var(--teal-soft); }
+
+  /* ---- pull ---- */
+  .pull { margin: 30px 0; padding: 24px 28px; background: var(--teal); color: var(--teal-ink); border-radius: var(--r); }
+  .pull p { margin: 0; max-width: 48ch; font-size: 1.26rem; line-height: 1.34; font-weight: 700; letter-spacing: -0.022em; }
+  .pull .after { margin-top: 13px; font-size: 0.94rem; font-weight: 400; line-height: 1.55; max-width: 62ch; letter-spacing: 0; }
+  .pull code, .pane.repo code { background: var(--wash); color: inherit; }
+
+  /* ================= THE PIPELINE ================= */
+  .pipe { margin-top: 26px; }
+  .terminus {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 12px;
+  }
+  .terminus b { color: var(--ink); font-weight: 600; letter-spacing: 0.06em; }
+  .terminus.out { margin: 12px 0 0; }
+  .gaterow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .gate {
+    background: var(--surface); border: 1px solid var(--line);
+    border-top: 4px solid var(--teal); border-radius: var(--r);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .gate-hd { padding: 16px 18px 14px; }
+  .gate .gno {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px;
+  }
+  .gate h4 { margin: 0 0 6px; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.022em; }
+  .gate .q { margin: 0; font-size: 0.92rem; color: var(--teal); font-weight: 600; }
+  .gate dl { margin: 0; padding: 0 18px 16px; display: grid; gap: 12px; }
+  .gate dt {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+  }
+  .gate dd { margin: 0; font-size: 0.89rem; line-height: 1.5; }
+  .gate dd .who { display: flex; flex-wrap: wrap; gap: 5px; }
+  .gate dd .who .chip { font-size: 10px; }
+  .gate .approve {
+    margin-top: auto; padding: 13px 18px; background: var(--teal-soft);
+    border-top: 1px solid var(--line); font-size: 0.88rem; line-height: 1.45;
+  }
+  .gate .approve b {
+    display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--teal); margin-bottom: 4px;
+  }
+  .loopback {
+    margin: 14px 0 0; padding: 13px 18px; border: 1px dashed var(--line-2);
+    border-radius: var(--r); font-size: 0.9rem; color: var(--muted); background: var(--surface);
+  }
+  .loopback b { color: var(--ink); font-weight: 600; }
+
+  /* ================= PERSONA CARDS ================= */
+  .people { display: grid; grid-template-columns: repeat(auto-fit, minmax(292px, 1fr)); gap: 14px; margin-top: 24px; }
+  .who-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px 20px; display: flex; flex-direction: column; }
+  .who-card .cmd {
+    font-family: var(--mono); font-size: 1.16rem; font-weight: 700;
+    color: var(--teal); letter-spacing: -0.01em; margin: 0 0 3px;
+  }
+  .who-card .human {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 12px;
+  }
+  .who-card .job { margin: 0 0 14px; font-size: 0.93rem; line-height: 1.5; font-weight: 600; }
+  .who-card .xchg { margin: auto 0 0; display: grid; gap: 8px; font-size: 0.86rem; line-height: 1.45; }
+  .who-card .xchg div { display: grid; grid-template-columns: 42px 1fr; gap: 10px; }
+  .who-card .xchg span {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); padding-top: 3px;
+  }
+  .who-card .xchg i { font-style: italic; color: var(--ink-2); }
+  .who-card.advisory { border-left: 3px solid var(--amber); }
+  .who-card.front { border-left: 3px solid var(--teal); background: var(--teal-soft); }
+  .who-card.front .human { color: var(--ink-2); }
+
+  /* ================= STEP STRIP ================= */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 24px; counter-reset: st; }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; counter-increment: st; }
+  .step .sn {
+    font-family: var(--mono); font-size: 2rem; font-weight: 600; line-height: 1;
+    color: var(--numeral); display: block; margin-bottom: 10px;
+  }
+  .step h4 { margin: 0 0 7px; font-size: 1rem; font-weight: 700; }
+  .step p { margin: 0; font-size: 0.89rem; line-height: 1.5; color: var(--muted); }
+
+  /* ================= JOURNEY ================= */
+  .journey { margin-top: 24px; display: grid; gap: 0; }
+  .hop { display: grid; grid-template-columns: 128px 1fr; gap: 18px; align-items: stretch; }
+  .hop .node {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    padding: 11px 10px; border: 1px solid var(--line); background: var(--surface);
+    border-radius: var(--r); text-align: center; align-self: start;
+  }
+  .hop.done .node { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .hop.todo .node { border-style: dashed; color: var(--muted); }
+  .hop .desc { padding: 10px 0 18px; font-size: 0.9rem; line-height: 1.55; color: var(--muted); }
+  .hop .desc b { color: var(--ink); font-weight: 600; }
+  .hop .desc .gt {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.11em; text-transform: uppercase;
+    color: var(--teal); display: block; margin-bottom: 3px;
+  }
+  .rung { height: 14px; margin-left: 63px; width: 2px; background: var(--green); }
+  .rung.dash { background: none; border-left: 2px dashed var(--line-2); }
+
+  /* ================= CHECKS ================= */
+  .checks { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-top: 22px; }
+  .ck { background: var(--surface); display: grid; grid-template-columns: 30px 1fr; gap: 14px; padding: 13px 18px; align-items: baseline; }
+  .ck .n { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ck p { margin: 0; font-size: 0.92rem; line-height: 1.5; }
+  .ck p b { font-weight: 600; }
+  .ck p em { font-style: normal; color: var(--muted); }
+
+  /* ---- cards ---- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 14px; margin-top: 22px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 19px 20px; }
+  .card h4 { margin: 0 0 9px; font-size: 1rem; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .card p { margin: 0; font-size: 0.9rem; line-height: 1.55; color: var(--muted); }
+  .card p + p { margin-top: 9px; }
+  .card.flag { border-left: 3px solid var(--amber); }
+  .card.stop { border-left: 3px solid var(--rust); }
+  .card.good { border-left: 3px solid var(--green); }
+
+  /* ---- handoff panes ---- */
+  .handoff { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+  .pane { border-radius: var(--r); padding: 20px; }
+  .pane.repo { background: var(--teal); color: var(--teal-ink); }
+  .pane.tool { background: var(--surface); border: 1px solid var(--line); }
+  .pane .kicker { font-family: var(--mono); font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; margin: 0 0 5px; opacity: 0.75; }
+  .pane h4 { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 14px; }
+  .pane ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .pane li { font-size: 0.89rem; line-height: 1.5; }
+  .pane li b { display: block; font-family: var(--mono); font-size: 0.8rem; font-weight: 600; margin-bottom: 2px; }
+  .pane.repo li, .pane.repo li b { color: var(--teal-ink); }
+  .pane.tool li { color: var(--muted); }
+  .pane.tool li b { color: var(--ink); }
+  .flow {
+    margin: 14px 0 0; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 12px;
+  }
+  .flow span { flex: 0 0 auto; }
+  .flow::before, .flow::after { content: ""; height: 1px; background: var(--line); flex: 1 0 20px; }
+
+  /* ---- table ---- */
+  .scroller { overflow-x: auto; margin-top: 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 540px; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 12px 18px; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+  thead th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.id { font-family: var(--mono); font-size: 0.87rem; font-weight: 600; white-space: nowrap; color: var(--teal); }
+
+  /* ---- ids ---- */
+  .ids { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 10px; margin-top: 22px; }
+  .idc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+  .idc b { font-family: var(--mono); font-size: 0.95rem; color: var(--teal); display: block; margin-bottom: 4px; }
+  .idc span { font-size: 0.86rem; color: var(--muted); line-height: 1.45; }
+
+  /* ---- asks ---- */
+  .asks { display: grid; gap: 12px; margin-top: 24px; }
+  .ask { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; }
+  .ask h4 { margin: 0 0 7px; font-size: 1rem; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .ask p { margin: 0; font-size: 0.91rem; line-height: 1.55; color: var(--muted); }
+  .ask.done { border-left: 3px solid var(--green); }
+  .ask.block { border-left: 3px solid var(--rust); }
+
+  footer {
+    max-width: 1180px; margin: 86px auto 0; padding: 26px 28px 60px;
+    border-top: 4px solid var(--teal); font-size: 0.89rem; color: var(--muted);
+  }
+  footer p { max-width: 78ch; margin: 0 0 11px; }
+  footer p:last-child { margin-bottom: 0; }
+  footer strong { color: var(--ink); font-weight: 600; }
+
+  :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  @media (max-width: 980px) {
+    .gaterow { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 860px) {
+    :root { --rail: 0px; }
+    section { grid-template-columns: 1fr; gap: 0; padding-top: 50px; }
+    .rail-sticky { position: static; display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+    .rail .no { font-size: 1.1rem; }
+    .rail .lbl { margin-top: 0; }
+    .handoff { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    .hop { grid-template-columns: 104px 1fr; gap: 12px; }
+    .rung { margin-left: 51px; }
+    .pull { padding: 20px 22px; }
+    .pull p { font-size: 1.12rem; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="mast-inner">
+    <p class="stamp">
+      <span class="tag">How it works</span>
+      <span>AI-DLC · ss-trigent/aidlc</span>
+      <span class="sep">/</span>
+      <span>3 August 2026</span>
+    </p>
+
+    <h1>Seven AI juniors. <em>Three gates.</em> Humans hold every key.</h1>
+
+    <p class="standfirst">
+      A customer need goes in one end and provably-working software comes out the other. At each of
+      three boundaries a <strong>named human clicks Approve in GitHub</strong> — and everything a
+      machine can check is checked by one CI status that fails the build. Nobody on the team needs to
+      read a framework file, know an ID, or touch git.
+    </p>
+  </div>
+</header>
+
+<dl class="band">
+  <div class="stat"><dt>Gates</dt><dd>3<small>Discovery · Delivery · Release</small></dd></div>
+  <div class="stat"><dt>AI personas</dt><dd>7<small>one per human counterpart</small></dd></div>
+  <div class="stat"><dt>Validator checks</dt><dd>14<small>one required CI status</small></dd></div>
+  <div class="stat"><dt>Tracked IDs</dt><dd>50<small>all unique, all linked</small></dd></div>
+  <div class="stat"><dt>Status files</dt><dd>0<small>status derives from GitHub</small></dd></div>
+  <div class="stat"><dt>Editors supported</dt><dd>4<small>Claude Code · Cursor · opencode · Copilot</small></dd></div>
+</dl>
+
+<div class="wrap">
+
+  <!-- ============ 01 THE FLOW ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">01</span><span class="lbl">The flow</span></div></div>
+    <div class="body">
+      <h2>The whole lifecycle, end to end</h2>
+      <p class="lede">
+        The source methodology has ten sequential phases. Every one survives — but they are grouped
+        into three <em>enforced</em> boundaries, because a gate is a mechanically checked, human-approved
+        merge, where a phase was a heading someone typed.
+      </p>
+
+      <div class="pipe">
+        <p class="terminus">
+          <span>Starts here</span>
+          <b>A customer need, in their own words</b>
+          <span>— saved verbatim, so every requirement has a source</span>
+        </p>
+
+        <div class="gaterow">
+          <article class="gate">
+            <div class="gate-hd">
+              <span class="gno">Gate 1 · Inception</span>
+              <h4>Discovery</h4>
+              <p class="q">Are we building the right thing?</p>
+            </div>
+            <dl>
+              <div>
+                <dt>Who drafts</dt>
+                <dd class="who"><span class="chip k-teal">/ba</span><span class="chip k-teal">/ux</span><span class="chip k-warn">/architect advises</span><span class="chip k-nil">/manager plans</span></dd>
+              </div>
+              <div>
+                <dt>What comes out</dt>
+                <dd>Three ordered pull requests: a requirements doc with numbered, testable requirements → a screen spec per screen, every state numbered, plus design tokens → user stories with numbered acceptance criteria. Alongside: an advisory DB + app architecture, and an advisory delivery plan</dd>
+              </div>
+              <div>
+                <dt>The distinctive step</dt>
+                <dd>A <b>grill pass</b> — ambiguities interrogated one question at a time <em>before</em> anything is drafted. What survives unresolved becomes an open question with a named owner, never a guess dressed as a requirement.</dd>
+              </div>
+            </dl>
+            <p class="approve">
+              <b>Human approves</b>
+              Three reviews, in order: the product owner merges requirements, the designer approves screen structure and the product team the styling, then the product owner merges the stories. Each merge commit is that step's scope baseline.
+            </p>
+          </article>
+
+          <article class="gate">
+            <div class="gate-hd">
+              <span class="gno">Gate 2 · Construction</span>
+              <h4>Delivery</h4>
+              <p class="q">Does this story provably work?</p>
+            </div>
+            <dl>
+              <div>
+                <dt>Who drafts</dt>
+                <dd class="who"><span class="chip k-teal">/dev</span><span class="chip k-teal">/qa</span><span class="chip k-warn">/architect</span></dd>
+              </div>
+              <div>
+                <dt>What comes out</dt>
+                <dd>One pull request per story holding everything: code, tests named after the criteria they prove, a decision record if a real trade-off existed, and the updated traceability links</dd>
+              </div>
+              <div>
+                <dt>The distinctive step</dt>
+                <dd><b>Test first, from the requirement.</b> QA derives tests from the story before reading the code, so a passing test has failed at least once. Tests written after a green implementation assert what the code does, not what was asked for.</dd>
+              </div>
+            </dl>
+            <p class="approve">
+              <b>Human approves</b>
+              A human reviews and merges the story PR. Every required check must be green first. Merged means delivered.
+            </p>
+          </article>
+
+          <article class="gate">
+            <div class="gate-hd">
+              <span class="gno">Gate 3 · Operations</span>
+              <h4>Release</h4>
+              <p class="q">Is production safe?</p>
+            </div>
+            <dl>
+              <div>
+                <dt>Who drafts</dt>
+                <dd class="who"><span class="chip k-teal">/devops</span><span class="chip k-nil">/manager reports</span></dd>
+              </div>
+              <div>
+                <dt>What comes out</dt>
+                <dd>The pipeline itself, releases, a current rollback procedure, monitoring tied to the performance budgets the requirements set</dd>
+              </div>
+              <div>
+                <dt>The distinctive step</dt>
+                <dd>Promotion only through the pipeline. A step someone has to do by hand is a pipeline bug, filed as an issue. A red quality step is never switched off to unblock a release.</dd>
+              </div>
+            </dl>
+            <p class="approve">
+              <b>Human approves</b>
+              A human approves each promotion in the pipeline — dev, then QA, then production. Authenticated, per environment.
+            </p>
+          </article>
+        </div>
+
+        <h3>Inside Gate 1 — scope locks left to right</h3>
+        <p>
+          Discovery runs as <b>three ordered pull requests, stories last</b> (<code>ADR-003</code>),
+          so a story is never written against scope that is still moving. Design itself runs in two
+          passes (<code>ADR-004</code>): structure — the screen spec, approved by the designer — then
+          styling — tokens and rendered previews, approved by the product team. Hi-fi frames stay in
+          the design tool. The order is <b>charter-enforced, not CI-blocked</b>: the personas refuse
+          to run ahead, and the human review holds the line — a deliberate choice over a new gate check.
+        </p>
+        <div class="steps">
+          <div class="step">
+            <span class="sn">1</span>
+            <h4>Requirements freeze</h4>
+            <p><code>/ba</code> grills, then drafts the requirements doc. The product owner merges —
+            and the requirements can no longer move.</p>
+          </div>
+          <div class="step">
+            <span class="sn">2</span>
+            <h4>Design approved</h4>
+            <p><code>/ux</code> drafts each screen from the requirement it serves. The designer signs
+            off the structure; the product team signs off the styling. A styling change that forces a
+            structural change reopens the structure pass.</p>
+          </div>
+          <div class="step">
+            <span class="sn">3</span>
+            <h4>Stories sliced</h4>
+            <p>Only now <code>/ba</code> slices stories, citing frozen requirements and
+            already-approved screens. This merge is the locked scope Gate 2 builds against.</p>
+          </div>
+          <div class="step">
+            <span class="sn">∥</span>
+            <h4>Advisory, in parallel</h4>
+            <p>Once requirements freeze: <code>/architect</code> drafts the DB + app architecture
+            (its own PR, blocks nothing) and <code>/manager</code> proposes a delivery plan —
+            estimates and two-week sprints the human locks in Jira. Neither gates anything.</p>
+          </div>
+        </div>
+
+        <p class="terminus out" style="margin-top:26px;">
+          <span>Ends here</span>
+          <b>Production</b>
+          <span>— and then feeds straight back:</span>
+        </p>
+
+        <p class="loopback">
+          <b>The loop.</b> An incident, a defect, or a change of mind does not get its own bureaucracy.
+          It becomes a GitHub issue — <code>bug</code> or <code>change-request</code> — which either
+          reopens Gate 1 for the affected artifacts or lands as a fix PR that must add a regression
+          test. Postmortem lessons are recorded as edges in the traceability graph. Nothing is learned
+          off the record.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 02 THE PEOPLE ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">02</span><span class="lbl">The people</span></div></div>
+    <div class="body">
+      <h2>Seven personas, seven real counterparts</h2>
+      <p class="lede">
+        One persona per human who can actually approve its work — a persona with nobody to report to
+        produces output nobody owns. You type your command; it interviews you and prepares the
+        paperwork. You never write a prompt.
+      </p>
+
+      <div class="people">
+        <article class="who-card front">
+          <p class="cmd">/aidlc</p>
+          <p class="human">Anyone · start here</p>
+          <p class="job">The front door. Works out who you are and what you need, then becomes the right persona.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“I'm new — what is this project?”</i></div>
+            <div><span>Get</span>A briefing, then it continues as your persona. No second command.</div>
+          </div>
+        </article>
+
+        <article class="who-card">
+          <p class="cmd">/ba</p>
+          <p class="human">Business analyst · product owner</p>
+          <p class="job">Turns a need into requirements and stories. Owns <em>what the product must do</em>.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“Planners need to compare shipping routes by cost and time.”</i></div>
+            <div><span>Get</span>A requirements PR first; stories come later, once design is approved — one link to review each time.</div>
+          </div>
+        </article>
+
+        <article class="who-card">
+          <p class="cmd">/ux</p>
+          <p class="human">Designer</p>
+          <p class="job">Turns approved requirements into screen specs — structure first, then styling — and the design system. Owns <em>what the user sees and does</em>.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“Design the results screen.”</i></div>
+            <div><span>Get</span>Every state numbered, plus a token file you import into Figma or Penpot.</div>
+          </div>
+        </article>
+
+        <article class="who-card advisory">
+          <p class="cmd">/architect</p>
+          <p class="human">Solution architect · tech lead</p>
+          <p class="job">Drafts the DB + app architecture once requirements freeze, advises where trade-offs are real, and reviews every story PR. <b>Advisory only</b> — cannot edit the repository; a reviewed PR lands what it drafts.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“Review this pull request.”</i></div>
+            <div><span>Get</span>Rated findings and a suggested verdict. Your review is the authority.</div>
+          </div>
+        </article>
+
+        <article class="who-card">
+          <p class="cmd">/dev</p>
+          <p class="human">Developer</p>
+          <p class="job">Implements one approved story as one PR: code, tests, and real evidence pasted in.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“Build the next ready story.”</i></div>
+            <div><span>Get</span>A branch, a failing test first, then the code that turns it green.</div>
+          </div>
+        </article>
+
+        <article class="who-card">
+          <p class="cmd">/qa</p>
+          <p class="human">QA engineer</p>
+          <p class="job">Derives tests from the requirement before reading the code, and files reproducible defects.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“This screen shows the wrong total.”</i></div>
+            <div><span>Get</span>A defect issue with steps and real output — and the fix needs a regression test.</div>
+          </div>
+        </article>
+
+        <article class="who-card">
+          <p class="cmd">/devops</p>
+          <p class="human">DevOps engineer</p>
+          <p class="job">Owns the path from merge to production: pipelines, promotions, rollback.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“Why is the build red?”</i></div>
+            <div><span>Get</span>The failing step, the cause, and a fix that rides a normal PR.</div>
+          </div>
+        </article>
+
+        <article class="who-card advisory">
+          <p class="cmd">/manager</p>
+          <p class="human">Delivery manager</p>
+          <p class="job">Reports, routes, and proposes the delivery plan — estimates and sprints the human locks in Jira. Reads status from GitHub only. <b>Holds no gate authority</b> and cannot edit the repository.</p>
+          <div class="xchg">
+            <div><span>You</span><i>“Where are we? What's stuck?”</i></div>
+            <div><span>Get</span>Status derived from pull requests, issues and checks — never from a document.</div>
+          </div>
+        </article>
+      </div>
+
+      <div class="cards">
+        <div class="card flag">
+          <h4>Two personas are read-only <em>by tooling</em></h4>
+          <p>The framework has always said the architect's review is advisory and the manager holds no
+          gate authority. Those were words. Both now declare the write tools as disallowed — they
+          cannot change a file — and <b>the validator fails the build if that restriction is ever
+          removed</b>.</p>
+        </div>
+        <div class="card">
+          <h4>Each persona exists three times</h4>
+          <p>A charter (the contract), a command you type, and a delegatable agent for parallel work.
+          The validator proves all three agree, so a persona cannot quietly drift from its contract.</p>
+        </div>
+        <div class="card stop">
+          <h4>The one limit that is not tool-enforced</h4>
+          <p><b>No persona may merge, approve or close anything.</b> A shell is a shell, so this is a
+          charter rule ranked above any instruction — and the framework says so plainly rather than
+          implying CI catches it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 USING IT ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">03</span><span class="lbl">Using it</span></div></div>
+    <div class="body">
+      <h2>One relay, hand-off by hand-off</h2>
+      <p class="lede">
+        Each stage is owned by one human typing one command. The persona interviews you, prepares a
+        pull request, and your merge passes the baton — it always ends by telling you who runs next
+        and what they type.
+      </p>
+
+      <div class="journey">
+        <div class="hop">
+          <div class="node">/ba</div>
+          <div class="desc"><span class="gt">Gate 1 · requirements</span>
+            <b>The BA / product owner</b> types <code>/ba</code> and talks through the customer need in
+            their own words — pasting meeting notes is fine. The persona grills every ambiguity first,
+            drafts the requirements doc, and opens the PR. <b>Your merge freezes the requirements</b>
+            and hands off to the designer.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/ux</div>
+          <div class="desc"><span class="gt">Gate 1 · design — structure</span>
+            <b>The designer</b> types <code>/ux</code>. One screen spec per requirement that needs UI,
+            every state numbered <code>ST-##</code>, conflicts listed until resolved. <b>The designer
+            approves the structure.</b></div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/ux</div>
+          <div class="desc"><span class="gt">Gate 1 · design — styling</span>
+            Same persona, second pass: design tokens for both themes and previews that render every
+            state styled. The designer takes the exported tokens into Figma or Penpot for hi-fi frames
+            (frames stay in the tool). <b>The product team approves the styling.</b>
+            <b>Cycle:</b> a styling change that forces a structural change reopens the structure pass.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/ba</div>
+          <div class="desc"><span class="gt">Gate 1 · stories</span>
+            The BA returns. Only now — with requirements and screens frozen — are stories sliced, each
+            citing its requirements, its screen, and numbered acceptance criteria.
+            <b>The product owner's merge locks the scope</b> — Gate 1 is done.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop todo">
+          <div class="node">∥ advisory</div>
+          <div class="desc"><span class="gt">In parallel, once requirements freeze</span>
+            <code>/architect</code> drafts the DB + app architecture — its own PR, blocks nothing.
+            <code>/manager</code> proposes the delivery plan — estimates and two-week sprints
+            <b>you</b> lock in Jira. Neither gates the relay.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/dev</div>
+          <div class="desc"><span class="gt">Gate 2 · one story, one PR</span>
+            <b>The developer</b> types <code>/dev</code> and names a ready story (or asks for the next
+            one). A <code>feat/US-###</code> branch, a failing test per criterion first, then the code
+            that turns it green — evidence pasted into the PR.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/qa</div>
+          <div class="desc"><span class="gt">Gate 2 · same PR</span>
+            <b>The QA engineer</b> types <code>/qa</code>. Tests are derived from the story
+            <em>before</em> reading the diff — positive per criterion, then negative, then boundary.
+            Wrong behavior found any time later becomes a <code>bug</code> issue whose fix PR must add
+            a regression test.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/architect</div>
+          <div class="desc"><span class="gt">Gate 2 · review, then merge</span>
+            Anyone asks <code>/architect</code> to review the PR: rated findings, a suggested verdict,
+            advisory. <b>A human merges when every check is green — merged means delivered.</b>
+            <b>Cycle:</b> repeat <code>/dev</code> → <code>/qa</code> → review for every story in the
+            locked scope.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop">
+          <div class="node">/devops</div>
+          <div class="desc"><span class="gt">Gate 3 · release</span>
+            <b>The DevOps engineer</b> types <code>/devops</code> for pipeline work. Promotion runs
+            dev → QA → production, and <b>you approve each step in the pipeline</b> — never out of
+            band.</div>
+        </div>
+      </div>
+
+      <p class="loopback">
+        <b>The cycles.</b> A defect → <code>bug</code> issue → <code>fix/#N</code> PR with a
+        regression test. A change of mind about approved scope → <code>change-request</code> issue →
+        the relay re-runs from the affected Gate 1 step (requirements, design, or stories) — same
+        PRs, same reviews. Production lessons land as <code>lessons</code> edges in the traceability
+        graph. <code>/manager</code> tells you where the baton is at any moment; <code>/aidlc</code>
+        is the front door when you don't know which command is yours.
+      </p>
+
+      <h3>Persona or agent — two ways to run the same role</h3>
+      <div class="handoff">
+        <div class="pane repo">
+          <p class="kicker">You are doing your own stage</p>
+          <h4>Type the command</h4>
+          <ul>
+            <li><b>/ba, /ux, /dev, /qa, /devops, /architect, /manager</b>
+              Conversational: it interviews you one question at a time, in plain language, and
+              prepares the paperwork. You never touch git or file paths.</li>
+            <li><b>/aidlc</b>
+              When unsure — it works out who you are and becomes the right persona.</li>
+            <li><b>Any editor</b>
+              The same commands exist in Cursor, opencode and Copilot Chat — generated from the same
+              charters, and CI fails if they drift (ADR-005).</li>
+          </ul>
+        </div>
+        <div class="pane tool">
+          <p class="kicker">Work runs alongside you</p>
+          <h4>Delegate the agent</h4>
+          <ul>
+            <li><b>aidlc-ba · aidlc-ux · aidlc-dev · aidlc-qa · aidlc-devops · aidlc-architect · aidlc-manager</b>
+              The same persona as a delegatable subagent — for parallel or background work: two
+              stories under two <code>aidlc-dev</code> agents, a coverage check handed to
+              <code>aidlc-qa</code> mid-session, an independent PR review from
+              <code>aidlc-architect</code>.</li>
+            <li><b>One contract, proven</b>
+              The charter in <code>ai/roles/</code> binds both surfaces; CI fails if they drift apart —
+              and the advisory agents (<code>aidlc-architect</code>, <code>aidlc-manager</code>) cannot
+              write files at all.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="flow"><span>Either way: no persona may merge, approve or close — that is always you, in GitHub</span></p>
+
+      <h3>The rhythm at every hand-off</h3>
+      <div class="steps">
+        <div class="step">
+          <span class="sn">1</span>
+          <h4>You talk</h4>
+          <p>Type your command and describe what you have in your own words. Paste meeting notes if
+          that is easier. One question comes back at a time, in plain language, with a sensible
+          default offered.</p>
+        </div>
+        <div class="step">
+          <span class="sn">2</span>
+          <h4>It gets grilled</h4>
+          <p>Vague answers get pushed on before anything is written: “what happens when…?” for every
+          edge. Anything still unresolved is recorded as an open question with your name on it — not
+          quietly invented.</p>
+        </div>
+        <div class="step">
+          <span class="sn">3</span>
+          <h4>You get a walkthrough</h4>
+          <p>Not a file dump. Each item in one sentence, what was decided on your behalf, and what is
+          still your call. A repository is not a readable format for an approver — the conversation
+          is.</p>
+        </div>
+        <div class="step">
+          <span class="sn">4</span>
+          <h4>You click Approve</h4>
+          <p>One GitHub link. Two clicks. That authenticates who approved exactly what, bound to an
+          exact commit. Then it tells you who is up next and what they type.</p>
+        </div>
+      </div>
+
+      <div class="pull">
+        <p>Approval is a GitHub review — never text in a document, never a message in a chat.</p>
+        <p class="after">
+          This is the load-bearing decision of the whole framework. A document header saying
+          “Approved by: Priya” can be typed by anyone and edited later. A pull-request review binds a
+          verified identity to a specific commit, permanently. The first implementation of this
+          methodology used document headers, and an independent review called it what it was:
+          compliance theatre.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 04 WORKED EXAMPLE ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">04</span><span class="lbl">Worked example</span></div></div>
+    <div class="body">
+      <h2>One real story, all the way through</h2>
+      <p class="lede">
+        Not an illustration — these are the actual artifacts in the repository today, with their real
+        identifiers. Solid rungs are built and machine-checked; dashed ones are the honest state of a
+        project that has not started building yet.
+      </p>
+
+      <div class="journey">
+        <div class="hop done">
+          <div class="node">REQ-003</div>
+          <div class="desc"><span class="gt">Gate 1 · the requirement</span>
+            “Each returned route lists its legs: mode, from and to, scheduled departure and arrival,
+            cost, duration, total transfers.” <b>Testable and sourced</b> — traced to the project
+            charter, not to someone's memory.</div>
+        </div>
+        <div class="rung"></div>
+
+        <div class="hop done">
+          <div class="node">US-003</div>
+          <div class="desc"><span class="gt">Gate 1 · the story</span>
+            “View ranked route results.” Cites REQ-003 and the usability requirement NFR-003. The link
+            is <b>bidirectional and validated</b> — a requirement cannot point at a story that does
+            not point back.</div>
+        </div>
+        <div class="rung"></div>
+
+        <div class="hop done">
+          <div class="node">AC-01…04</div>
+          <div class="desc"><span class="gt">Gate 1 · the criteria</span>
+            Four numbered criteria in Given/When/Then form. The manifest's list must match the
+            headings in the story file exactly, so <b>a criterion cannot be silently dropped</b>.</div>
+        </div>
+        <div class="rung"></div>
+
+        <div class="hop done">
+          <div class="node">SCR-002</div>
+          <div class="desc"><span class="gt">Gate 1 · the screen</span>
+            The ranked-results screen: purpose, layout, accessibility, and the structural decisions
+            with their rationale. <b>Two unresolved conflicts block its sign-off</b> — including that
+            the objective score is a raw 0–1 number the requirements never define.</div>
+        </div>
+        <div class="rung"></div>
+
+        <div class="hop done">
+          <div class="node">ST-01…06</div>
+          <div class="desc"><span class="gt">Gate 1 · the states</span>
+            Ranked list, expanded legs, loading, no-route, error, single-leg. Numbered exactly like
+            acceptance criteria, for the same reason: <b>an unnumbered state is one nobody notices is
+            missing</b>.</div>
+        </div>
+        <div class="rung"></div>
+
+        <div class="hop done">
+          <div class="node">route-card</div>
+          <div class="desc"><span class="gt">Gate 1 · the component</span>
+            Real HTML on real tokens, rendering all six states, opening in a browser with no build
+            step. <b>CI proves every state is actually rendered</b> — not merely listed.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop todo">
+          <div class="node">Tests</div>
+          <div class="desc"><span class="gt">Gate 2 · not started</span>
+            Each criterion needs a test whose name cites <code>US-003/AC-##</code>. The moment this
+            story moves to its delivery branch, <b>having no tests stops being a warning and fails the
+            build</b>.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop todo">
+          <div class="node">Code</div>
+          <div class="desc"><span class="gt">Gate 2 · not started</span>
+            The Angular feature. <b>There is no code edge in the graph yet</b> — the most consequential
+            gap in the system, and the cheapest to close: record the story PR's merge commit.</div>
+        </div>
+        <div class="rung dash"></div>
+
+        <div class="hop todo">
+          <div class="node">Deployed</div>
+          <div class="desc"><span class="gt">Gate 3 · waiting on an environment</span>
+            No deployment edge and no monitoring edge. Declared scope in the release gate rather than
+            pretended practice.</div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card good">
+          <h4>Why the chain matters</h4>
+          <p>Ask “why does this line of code exist?” and the answer is a path back to a sentence a
+          customer said. Ask “what breaks if we drop this requirement?” and the graph lists the
+          stories, screens, states, components and tests that hang off it — before anyone edits
+          anything.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 05 ENFORCEMENT ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">05</span><span class="lbl">Enforcement</span></div></div>
+    <div class="body">
+      <h2>One command decides if any of this is real</h2>
+      <p class="lede">
+        The operating principle is blunt: <strong>a rule that is not checked by CI or by a GitHub
+        setting is guidance, not governance.</strong> Fourteen checks run on every pull request as a
+        single required status.
+      </p>
+
+      <div class="checks">
+        <div class="ck"><span class="n">1</span><p><b>Every identifier is unique</b> across the whole repository <em>— no two documents claiming the same number</em></p></div>
+        <div class="ck"><span class="n">2</span><p><b>Every link resolves in both directions</b>, and every requirement a story cites is a node in the graph <em>— nothing hangs off one-way</em></p></div>
+        <div class="ck"><span class="n">3</span><p><b>The criteria list matches the story file</b> exactly <em>— a criterion cannot vanish between document and graph</em></p></div>
+        <div class="ck"><span class="n">4</span><p><b>Every criterion is named in a passing, active test.</b> A story in delivery with no tests fails outright <em>— citations in comments or skipped tests are not proof</em></p></div>
+        <div class="ck"><span class="n">5</span><p><b>Test files that cite a story are listed against it</b> <em>— no stale graph under-reporting coverage</em></p></div>
+        <div class="ck"><span class="n">6</span><p><b>Every product project can actually run tests</b> <em>— untestable code is a build failure, not an oversight</em></p></div>
+        <div class="ck"><span class="n">7</span><p><b>The published traceability matrix matches what the graph generates</b> <em>— no hand-edited view that flatters reality</em></p></div>
+        <div class="ck"><span class="n">8</span><p><b>Decision and lesson links point at real artifacts</b> <em>— no dangling references</em></p></div>
+        <div class="ck"><span class="n">9</span><p><b>The distributable copy of the framework matches its source</b> <em>— other teams cannot install a drifted version</em></p></div>
+        <div class="ck"><span class="n">10</span><p><b>Every persona's three surfaces agree</b>, and the two advisory personas still cannot write <em>— authority is structural, not aspirational</em></p></div>
+        <div class="ck"><span class="n">11</span><p><b>Design is complete:</b> a story with UI cites a screen, a screen traces to a story or the requirement it serves, every numbered state is rendered by a component, and the exported token file matches the stylesheet <em>— eight sub-rules</em></p></div>
+        <div class="ck"><span class="n">12</span><p><b>Ticket templates are safe:</b> none declares a field that would forward approval or duplicate what the tracker owns, no unknown placeholders, no stale markup <em>— see section 07</em></p></div>
+        <div class="ck"><span class="n">13</span><p><b>The Cursor, opencode and Copilot persona surfaces match their sources</b> — generated files, never hand-edited <em>— ADR-005</em></p></div>
+        <div class="ck"><span class="n">14</span><p><b>The framework itself cannot be quietly edited.</b> Every framework-owned file matches a shipped hash lock; an adopting team edits only its own standards, ticket templates and project context — a different rule goes upstream as a change request <em>— newest addition, the shared-library ownership rule</em></p></div>
+      </div>
+
+      <div class="cards">
+        <div class="card flag">
+          <h4>What it deliberately cannot prove</h4>
+          <p>That a test's assertions are <em>meaningful</em>, or that a screen state is handled
+          <em>well</em>. An empty test body with the right name satisfies the tooling. Judging quality
+          is the reviewer's job — which is exactly why every gate still ends at a human.</p>
+        </div>
+        <div class="card stop">
+          <h4>And the one gap that undermines all of it <span class="chip k-err">Open</span></h4>
+          <p><b>Branch protection is unavailable on this repository's plan.</b> Every check above is
+          visible red or green on each pull request, but nothing blocks a merge. It is an
+          administrative setting, not code, and it is the highest-value outstanding item in the whole
+          system.</p>
+        </div>
+      </div>
+
+      <h3>The identifier scheme, in full</h3>
+      <div class="ids">
+        <div class="idc"><b>REQ-###</b><span>A functional requirement</span></div>
+        <div class="idc"><b>NFR-###</b><span>Speed, usability, reliability</span></div>
+        <div class="idc"><b>RISK-###</b><span>A recorded risk</span></div>
+        <div class="idc"><b>US-###</b><span>A user story</span></div>
+        <div class="idc"><b>AC-##</b><span>An acceptance criterion, scoped to its story</span></div>
+        <div class="idc"><b>SCR-###</b><span>A screen specification</span></div>
+        <div class="idc"><b>ST-##</b><span>A screen state, scoped to its screen</span></div>
+        <div class="idc"><b>ADR-###</b><span>A decision with a real trade-off</span></div>
+      </div>
+      <p style="margin-top:16px;">
+        Defects and change requests are GitHub issue numbers, not documents. Test cases are test names,
+        not records. Personas explain each identifier the first time you see it and never ask you to
+        remember one.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 06 DESIGN ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">06</span><span class="lbl">Design</span></div></div>
+    <div class="body">
+      <h2>Design is a handoff, not a tool we own</h2>
+      <p class="lede">
+        The newest change, and the one that most affects how a designer joins. The repository sits
+        <strong>upstream</strong> of whichever tool the designer already uses. It holds what a gate can
+        check; the tool holds what a gate cannot.
+      </p>
+
+      <div class="handoff">
+        <div class="pane repo">
+          <p class="kicker">Canonical · CI-enforced · in the pull request</p>
+          <h4>The repository</h4>
+          <ul>
+            <li><b>Screen specs</b>Purpose, layout, every numbered state, accessibility, decisions with rationale, and conflicts that block sign-off.</li>
+            <li><b>Design tokens</b>One canonical stylesheet, plus a generated export in the W3C standard format.</li>
+            <li><b>Component previews</b>Real HTML on real tokens, every state marked. No build step, no network.</li>
+          </ul>
+        </div>
+        <div class="pane tool">
+          <p class="kicker">Figma · Penpot · Sketch · paper</p>
+          <h4>The designer's tool</h4>
+          <ul>
+            <li><b>The imported token set</b>Tokens Studio, Penpot tokens, Style Dictionary — anything reading the standard.</li>
+            <li><b>Wireframes and hi-fi frames</b>One frame per numbered state; the numbering is the checklist. Frames are not checked in.</li>
+            <li><b>Exploration and critique</b>Variants, comment threads, annotation — where designers already work well.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="flow"><span>One way only</span></p>
+
+      <p>
+        Nothing is authored downstream and pulled back — that would put a Gate 1 artifact outside
+        version control. The token export is <b>generated</b> from the stylesheet and CI fails if the
+        two disagree, so the palette a designer draws with cannot drift from the palette that ships.
+        That is a guarantee a design-tool-first workflow could not give, and it is the whole argument
+        for pointing the arrow this way.
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <h4>Why <code>/ux</code> became its own persona</h4>
+          <p>Design used to be a sketch pasted into a story, and one persona covered both crafts. Once
+          design became CI-enforced, that persona was producing artifacts no one with design authority
+          reviewed. <b>Enforcing an artifact reveals whether its role has an owner.</b></p>
+        </div>
+        <div class="card flag">
+          <h4>The honest limitation</h4>
+          <p>This does not capture a design tool's collaboration surface — comment threads, handoff
+          annotation, visual history. The collaboration a <em>gate</em> depends on (which states exist,
+          which conflicts are open, who owns them) is now in reviewable files. The rest stays in the
+          tool.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 07 TRACKING ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">07</span><span class="lbl">Tracking</span></div></div>
+    <div class="body">
+      <h2>A board for everyone without repository access</h2>
+      <p class="lede">
+        Clients, some managers, and testers need to follow this work and will never open a pull
+        request. Jira is the board they already read. It carries delivery tracking, a client-readable
+        view, and test evidence — and no approval whatsoever.
+      </p>
+
+      <div class="pull">
+        <p>Approval never travels — in either direction.</p>
+        <p class="after">
+          A ticket moved to Done, a sign-off field, a comment saying &ldquo;approved&rdquo; — none of
+          these open or close a gate. A pull-request review authenticates who approved exactly which
+          bytes; a ticket field authenticates nothing once it has crossed an integration boundary, and
+          <em>what</em> was approved is no longer recoverable. That is the one thing this framework
+          will not forward through an integration.
+        </p>
+      </div>
+
+      <h3>Who does what with it</h3>
+      <div class="cards">
+        <div class="card">
+          <h4><code>/ba</code> — on request</h4>
+          <p>Creates the epic, story and change-request tickets when the human asks. A story that is
+          not yet approved says <b>Draft — awaiting approval</b>, so the board never implies agreement
+          that does not exist.</p>
+        </div>
+        <div class="card">
+          <h4><code>/qa</code> — bugs and test evidence</h4>
+          <p>One test ticket per acceptance criterion, its result filled from a real pipeline run. A
+          criterion with no automated test reads <b>Not yet automated</b> — never a pass nobody
+          earned.</p>
+        </div>
+        <div class="card">
+          <h4><code>/manager</code> — keeps it current</h4>
+          <p>Mirrors delivery status from GitHub and cross-links tickets to their specifications.
+          Reporting outward is inside its charter; it still holds no gate authority in either system.</p>
+        </div>
+        <div class="card stop">
+          <h4><code>/architect</code> — never writes</h4>
+          <p>Its read-only guarantee is a tool restriction on <em>files</em>, which does not reach an
+          external system. So this one is a <b>charter rule, not tool-enforced</b> — stated plainly
+          rather than pretended.</p>
+        </div>
+      </div>
+
+      <h3>Five templates, filled from the specification</h3>
+      <div class="scroller">
+        <table>
+          <thead><tr><th>Ticket</th><th>Built from</th><th>Carries</th></tr></thead>
+          <tbody>
+            <tr><td class="id">Epic</td><td>An epic artifact</td><td>Goal, its stories, open decisions</td></tr>
+            <tr><td class="id">Story</td><td>A user story</td><td>What it delivers, the requirements behind it, every acceptance criterion, its screens, what is still undecided</td></tr>
+            <tr><td class="id">Test</td><td>One acceptance criterion</td><td>What is being proven, the result, and the pipeline run it came from</td></tr>
+            <tr><td class="id">Bug</td><td>A defect issue</td><td>What goes wrong, what should happen, how to see it, which criterion it breaks</td></tr>
+            <tr><td class="id">Change&nbsp;request</td><td>A change issue</td><td>The ask in the requester's words, what it affects, who decides</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:20px;">
+        Each ticket deep-links its specification, so the board is never where someone reads the spec —
+        only where they see the state of it. Sprints, assignees and estimates stay the tracker's
+        business; mirroring those into the repository would recreate the status-file habit this
+        framework was rebuilt to remove.
+      </p>
+
+      <h3>Kept honest by construction</h3>
+      <div class="cards">
+        <div class="card good">
+          <h4>One writer, dry run by default</h4>
+          <p>Every write goes through a single tool that prints the exact text a client will read and
+          changes nothing. So client-facing wording is reviewed in a pull request <em>before</em> it
+          reaches a live board. No credentials needed to do that.</p>
+        </div>
+        <div class="card good">
+          <h4>A refusal list in code</h4>
+          <p>Status transitions, sign-off fields, sprint, assignee, estimate and worklog are refused
+          regardless of what a template or an instruction asks for. Check 12 rejects a template that
+          even declares one.</p>
+        </div>
+        <div class="card flag">
+          <h4>Losing the tracker cannot break the build</h4>
+          <p>A recorded ticket number is a convenience for humans, not a governance edge. A missing one
+          is a warning. That is the test of whether an integration stayed in its lane.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 08 DIVERGENCE ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">08</span><span class="lbl">Divergence</span></div></div>
+    <div class="body">
+      <h2>Where this differs from the source methodology</h2>
+      <p class="lede">
+        Every deviation follows one rule: enforcement is only credible where a check can exist.
+        Nothing was deleted for taste, and each choice is recorded with its accepted costs.
+      </p>
+
+      <div class="scroller">
+        <table>
+          <thead><tr><th>The specification asks for</th><th>We use</th><th>Because</th></tr></thead>
+          <tbody>
+            <tr><td>10 sequential phases</td><td class="id">3 gates</td><td>A phase boundary was a typed heading; a gate is a checked, approved merge</td></tr>
+            <tr><td>11 AI roles</td><td class="id">7 personas</td><td>One per human who can approve the output. Roles with no counterpart were merged</td></tr>
+            <tr><td>Figma for design</td><td class="id">Specs + tokens</td><td>A frame is a URL CI cannot read. Files can be validated — see section 06</td></tr>
+            <tr><td>A graph database</td><td class="id">One JSON file</td><td>A reviewer cannot diff a database, and nothing in CI could validate it</td></tr>
+            <tr><td>A separate orchestrator service</td><td class="id">Skills + subagents</td><td>The state it would hold already lives in GitHub and one file</td></tr>
+            <tr><td>A mix of six AI vendors</td><td class="id">Anthropic core, any editor</td><td>One framework toolchain and audit trail; Cursor, opencode and Copilot execute the same charters through generated, drift-checked surfaces — ADR-005</td></tr>
+            <tr><td>Jira as the system of record</td><td class="id">Jira alongside</td><td>Adopted for tracking and client visibility, never for approval — section 07. Azure DevOps stays declined</td></tr>
+            <tr><td>Durable agent memory</td><td class="id">Derived state</td><td>Project state outside GitHub is the status-file trap this was rebuilt to remove</td></tr>
+            <tr><td>Review code, then write tests</td><td class="id">Tests first</td><td>Deliberately inverted — a test written after green asserts what the code does</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="margin-top:18px;">
+        The full rationale, with the costs we accepted and the objections we withdrew, is the decision
+        record <code>ADR-001</code> in the repository — <b>accepted</b> by the architect, recorded
+        3 August 2026.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 09 STATE ============ -->
+  <section>
+    <div class="rail"><div class="rail-sticky"><span class="no">09</span><span class="lbl">Where we are</span></div></div>
+    <div class="body">
+      <h2>Project state, and what needs a decision</h2>
+      <p class="lede">
+        Gate 1 has produced real artifacts. Gate 2 has not started — no story is on a delivery branch,
+        so no test exists yet. That is the honest reading of the graph, not a rounding-up.
+      </p>
+
+      <div class="cards">
+        <div class="card good">
+          <h4>Built <span class="chip k-ok">Green</span></h4>
+          <p>Requirements and three stories · two screen specs with eleven numbered states · design
+          tokens plus one component · the whole traceability graph (50 IDs, validator green) · the
+          validator and its fourteen checks · the reordered Gate 1 with two accepted decision records
+          (ADR-003, ADR-004) · persona surfaces for Cursor, opencode and Copilot, generated and
+          drift-checked (ADR-005) · the framework packaged so another team can install it — framework-owned files hash-locked, with an install interview that tailors standards and project context to the adopting stack.</p>
+        </div>
+        <div class="card flag">
+          <h4>Open, tracked <span class="chip k-warn">Waiting</span></h4>
+          <p>Five requirements have no story yet · four design conflicts need a product decision ·
+          five requirements-level open questions sit with the product owner.</p>
+        </div>
+        <div class="card stop">
+          <h4>Not built <span class="chip k-err">Gaps</span></h4>
+          <p>No tests, because nothing is in delivery · no code, deployment or monitoring edge in the
+          graph · the architecture folder holds only its README — the Architect's first DB + app
+          architecture deliverable is still to be drafted · security, accessibility and performance
+          checks are human-review items, not automated scans.</p>
+        </div>
+      </div>
+
+      <h3>Decisions requested from the architect</h3>
+      <div class="asks">
+        <div class="ask done">
+          <h4>The Gate 1 reorder and extensions <span class="chip k-ok">Accepted</span></h4>
+          <p>ADR-003 (requirements → design → stories, scope locked) and ADR-004 (two-phase design,
+          the architecture deliverable, advisory delivery planning) were reviewed and approved by the
+          architect on 31 July. The pull request that banks that review in GitHub is not open yet —
+          until it is, the authoritative record the framework insists on does not exist.</p>
+        </div>
+        <div class="ask done">
+          <h4>The governing decision records <span class="chip k-ok">Accepted</span></h4>
+          <p>ADR-001 (three gates, seven personas, single vendor) and ADR-002 (Jira for tracking,
+          never approval) are architect-approved, recorded 3 August. All four ADRs now agree — and all
+          four acceptances await the same thing: the pull request that banks the review in GitHub.</p>
+        </div>
+        <div class="ask block">
+          <h4>Branch protection <span class="chip k-err">Blocking everything</span></h4>
+          <p>Make the repository public, or upgrade the plan. Until then the enforcement spine runs on
+          convention. Highest value available, and it is a setting rather than code.</p>
+        </div>
+        <div class="ask done">
+          <h4>The <code>/ux</code> split <span class="chip k-ok">Confirmed by use</span></h4>
+          <p>Shipped ahead of a ruling; the architect's approved Gate 1 flow (ADR-003/ADR-004) now
+          builds on it — the designer approves structure, the product team approves styling.</p>
+        </div>
+        <div class="ask done">
+          <h4>Design tooling <span class="chip k-ok">Position set</span></h4>
+          <p>Confirm section 06 — repository upstream, any tool downstream, none mandated — or name a
+          tool to integrate with directly, in which case the integration is additive.</p>
+        </div>
+        <div class="ask done">
+          <h4>The tracker's boundary <span class="chip k-ok">Recorded</span></h4>
+          <p>Confirm section 07 — Jira for tracking, client visibility and test evidence, with approval
+          staying a pull-request review in both directions. Recorded as a decision, reversing an
+          earlier decline on exactly the terms that decline pre-committed to.</p>
+        </div>
+        <div class="ask">
+          <h4>Multi-tool surfaces <span class="chip k-warn">ADR-005 proposed</span></h4>
+          <p>The personas are now typeable in Cursor, opencode and Copilot, generated from the Claude
+          sources with drift failing CI. The decision record scoping ADR-001's Anthropic-only position
+          awaits review — and the read-only guarantee is tool-enforced only where the tool allows it
+          (Claude Code, opencode); elsewhere it is a stated charter rule.</p>
+        </div>
+        <div class="ask">
+          <h4>Should the graph reach code? <span class="chip k-teal">New</span></h4>
+          <p>Neither the design path nor the test path has a code edge. The story PR's merge commit is
+          the cheapest way to close it, and it would let a component preview be traced to the code that
+          implements it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <p>
+    Generated from the <code>ss-trigent/aidlc</code> repository, 3 August 2026.
+    Everything here is verifiable in the tree: the framework at <code>ai/AI-DLC.md</code>, the three
+    gates in <code>ai/gates/</code>, the persona contracts in <code>ai/roles/</code>, the checks in
+    <code>tools/aidlc-check.mjs</code>, and the graph in <code>knowledge/traceability/manifest.json</code>.
+  </p>
+  <p>
+    <strong>Nothing in the current change set has been merged.</strong> Status derives from GitHub —
+    pull requests, issues and checks — never from this page.
+  </p>
+</footer>
+
