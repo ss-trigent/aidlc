@@ -6,6 +6,9 @@
   "engines": {
     "node": ">=20"
   },
+  "bin": {
+    "aidlc-scaffold": "tools/aidlc-scaffold.mjs"
+  },
   "scripts": {
     "check": "node tools/aidlc-check.mjs",
     "build:plugin": "node tools/aidlc-build-plugin.mjs",

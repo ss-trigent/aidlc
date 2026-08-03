@@ -33,7 +33,7 @@ Two invariants were at stake:
 
 3. **ADR-001's "Anthropic-only" is scoped to what it actually decided:** one primary assistant, one audit trail, and no multi-vendor *orchestration stack* (no Codex/LangGraph/etc. as framework components). It did not — and after this ADR explicitly does not — forbid a team member's editor from executing the tool-agnostic charters. The accepted cost: work drafted in Cursor/opencode/Copilot is produced by whatever model that tool runs, so "one model vendor" no longer describes drafting. It still describes the framework's own tooling, and the enforcement spine (GitHub reviews + `aidlc-check`) is model-independent by design — which is the real guarantee.
 
-4. **The Claude Code plugin ships the generator** (`framework/tools/aidlc-build-surfaces.mjs`) so adopting repos can emit the same surfaces; wiring it into `/aidlc-init` is deferred until someone asks.
+4. **The Claude Code plugin ships the generator** (`framework/tools/aidlc-build-surfaces.mjs`) so adopting repos can emit the same surfaces; wiring it into `/aidlc-init` is deferred until someone asks. *(Since done: `/aidlc-init` now drives the deterministic scaffolder `tools/aidlc-scaffold.mjs`, which pins the personas and generates all editor surfaces in adopting repos — also runnable without Claude Code via `npx github:ss-trigent/aidlc`.)*
 
 ## Alternatives considered
 

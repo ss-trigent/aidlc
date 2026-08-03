@@ -756,6 +756,7 @@ const FRAMEWORK_TOOLS = [
   'aidlc-jira.mjs',
   'aidlc-build-plugin.mjs',
   'aidlc-build-surfaces.mjs',
+  'aidlc-scaffold.mjs',
 ];
 // CRLF-normalized so a Windows autocrlf checkout doesn't read as tampering
 const hashFile = (p) =>
