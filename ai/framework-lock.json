@@ -16,7 +16,7 @@
     "ai/roles/ba.md": "fb211dc0cb3e7c63aa1fda5e57fb08296990f001abd4e3d49e0cc90ed0b9a2a3",
     "ai/roles/dev.md": "de23eff9a445becb4fc8beae5472bfcac5872951125db64abfbb52c1e36cbfde",
     "ai/roles/devops.md": "664933bcd9cc4bccca95387f0f70fac7f1c3907d552d4b160331223b51e34abe",
-    "ai/roles/manager.md": "b5bb3b5cb7b441950245a527c89148f45ff970c9d9987fed67b24affef81a82d",
+    "ai/roles/manager.md": "40af0c6486aa43482ca2ff4816444d7ca5531c85c101de92708d1efa227fc13c",
     "ai/roles/qa.md": "c1ffdd204f2d5be81c5e510df5a42f301df687357c8f3b1f529de0475fccce32",
     "ai/roles/ux.md": "98926bdf3f41f0c6b9797a936905fd78be243149e6a81c3426e36e385e9b6f96",
     "ai/templates/adr.md": "b0c2042d8520f71806437ad28856517cf1c4b0bdf31f7be200fd7ebcf1309ddd",
@@ -24,7 +24,7 @@
     "ai/templates/pr-description.md": "6e9b3159b11b0d106907b1a41d71e96a337247816ba1e5b571c40eb8fcd69e5f",
     "ai/templates/screen-spec.md": "2de4ffe9cd92600149328f3854bd530098af11d7c6a1cdae011a292dbd6cec51",
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
-    "tools/aidlc-build-plugin.mjs": "afe95456cb533a538ffc28b7cac378f74801a21859df49f2495130122782e597",
+    "tools/aidlc-build-plugin.mjs": "36589778902fa31b489bc3f47ec75983a22163fb447dba7ae4d9f4309e414407",
     "tools/aidlc-build-surfaces.mjs": "abf119d62366cc564a52d5fd5db146b65faf3a7bf09feea5ad69c0957df90c0f",
     "tools/aidlc-check.mjs": "232c1fe2cead15082bc78c2f07e352b6f3d358042e9e5f864ce4a3dbb155d15e",
     "tools/aidlc-jira.mjs": "6e87c26c4732c0fca02d90d5b8b32569f3e326a38f19ab45812245d25f115744"

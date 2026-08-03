@@ -4,7 +4,7 @@ A delivery framework where seven role-persona AI juniors (BA, UX, Architect, DEV
 
 ## Use it in your repo
 
-In Claude Code:
+**One-time setup** — one person on the team, in Claude Code (the plugin and scaffolder are Claude Code–only; no plugin exists or is needed for the other editors):
 
 ```
 /plugin marketplace add ss-trigent/aidlc
@@ -18,7 +18,22 @@ Then, in the repository you want to run AI-DLC in:
 /aidlc             # start working — routes you to your persona
 ```
 
-Full walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades: **[docs/adopting-aidlc.md](docs/adopting-aidlc.md)**.
+The scaffold pins the personas into the repository itself for every editor. Once it's merged, each teammate's setup is **cloning the repo** — nothing to install per person:
+
+| Your editor               | Setup                                          | Where the personas live                                                                            |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Claude Code**           | clone (plugin optional — repo carries it all)  | `/aidlc`, `/ba`, `/dev` … as skills + delegatable agents in `.claude/`                             |
+| **Cursor**                | clone                                          | `/ba`, `/dev` … as commands in `.cursor/commands/`, plus skills and agents under `.cursor/`        |
+| **GitHub Copilot**        | clone                                          | `/ba`, `/dev` … as prompt files in Copilot Chat (`.github/prompts/`), plus skills and agents in `.github/` |
+| **opencode**              | clone                                          | `/ba`, `/dev` … as commands in `.opencode/commands/`, plus skills and agents under `.opencode/`    |
+
+All four surfaces are generated from the same repo-pinned sources and drift-checked in CI, so every teammate runs the identical persona version regardless of editor. Only `/aidlc-init` (scaffold + upgrades) needs Claude Code; the gates are editor-independent — approvals are GitHub PR reviews and `aidlc-check` is the required CI status either way.
+
+Full walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades, per-editor details: **[docs/adopting-aidlc.md](docs/adopting-aidlc.md)**. For a visual tour of the whole methodology, open **[docs/aidlc-how-it-works.html](docs/aidlc-how-it-works.html)** in a browser.
+
+### Bootstrapping without Claude Code
+
+If nobody on the team has Claude Code, you can scaffold by hand: clone this repo, then in your target repo have your editor's AI agent follow the scaffold instructions in [`packages/aidlc-plugin/skills/aidlc-init/SKILL.md`](packages/aidlc-plugin/skills/aidlc-init/SKILL.md), reading `$CLAUDE_PLUGIN_ROOT` as the path to your clone's `packages/aidlc-plugin`. The steps are plain shell commands plus an interview any capable agent can run — the result is byte-identical to what the plugin produces, and `aidlc-check` verifies it the same way.
 
 ## What's in this repo
 
