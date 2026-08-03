@@ -4,7 +4,7 @@ A delivery framework where seven role-persona AI juniors (BA, UX, Architect, DEV
 
 ## Use it in your repo
 
-**One-time setup** — one person on the team, in Claude Code (the plugin and scaffolder are Claude Code–only; no plugin exists or is needed for the other editors):
+**One-time setup** — one person on the team, in Claude Code (no plugin exists or is needed for the other editors — and no Claude Code at all? see [Bootstrapping without Claude Code](#bootstrapping-without-claude-code)):
 
 ```
 /plugin marketplace add ss-trigent/aidlc
@@ -27,13 +27,19 @@ The scaffold pins the personas into the repository itself for every editor. Once
 | **GitHub Copilot**        | clone                                          | `/ba`, `/dev` … as prompt files in Copilot Chat (`.github/prompts/`), plus skills and agents in `.github/` |
 | **opencode**              | clone                                          | `/ba`, `/dev` … as commands in `.opencode/commands/`, plus skills and agents under `.opencode/`    |
 
-All four surfaces are generated from the same repo-pinned sources and drift-checked in CI, so every teammate runs the identical persona version regardless of editor. Only `/aidlc-init` (scaffold + upgrades) needs Claude Code; the gates are editor-independent — approvals are GitHub PR reviews and `aidlc-check` is the required CI status either way.
+All four surfaces are generated from the same repo-pinned sources and drift-checked in CI, so every teammate runs the identical persona version regardless of editor. The gates are editor-independent — approvals are GitHub PR reviews and `aidlc-check` is the required CI status either way.
 
 Full walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades, per-editor details: **[docs/adopting-aidlc.md](docs/adopting-aidlc.md)**. For a visual tour of the whole methodology, open **[docs/aidlc-how-it-works.html](docs/aidlc-how-it-works.html)** in a browser.
 
 ### Bootstrapping without Claude Code
 
-If nobody on the team has Claude Code, you can scaffold by hand: clone this repo, then in your target repo have your editor's AI agent follow the scaffold instructions in [`packages/aidlc-plugin/skills/aidlc-init/SKILL.md`](packages/aidlc-plugin/skills/aidlc-init/SKILL.md), reading `$CLAUDE_PLUGIN_ROOT` as the path to your clone's `packages/aidlc-plugin`. The steps are plain shell commands plus an interview any capable agent can run — the result is byte-identical to what the plugin produces, and `aidlc-check` verifies it the same way.
+The scaffold is a plain Node script — `/aidlc-init` itself just drives it. From inside your target repo:
+
+```bash
+npx github:ss-trigent/aidlc
+```
+
+(or clone this repo and run `node aidlc/tools/aidlc-scaffold.mjs /path/to/your-repo`). It installs the framework, pins the personas for every editor, seeds the traceability manifest and artifact homes, points `AGENTS.md` at the framework, writes the `aidlc-check` CI workflow if the repo has none, and verifies — identical output to the plugin flow, refusing to overwrite anything that differs. One step stays conversational: `ai/standards/` and `ai/project-context.md` are still reference seeds afterwards, so open your editor, run `/aidlc`, and say "we just scaffolded — tailor the standards to this repo".
 
 ## What's in this repo
 
@@ -41,7 +47,7 @@ If nobody on the team has Claude Code, you can scaffold by hand: clone this repo
 | ------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
 | `ai/`                                 | The framework itself: methodology, persona charters, gates, quality bars, templates, reference standards | **source of truth** (hash-locked via `ai/framework-lock.json`) |
 | `.claude/skills/` + `.claude/agents/` | Persona surface sources (skills + delegatable agents)               | **source of truth**                                     |
-| `tools/aidlc-*.mjs`                   | The CI validator, plugin/surface builders, Jira sync                | **source of truth**                                     |
+| `tools/aidlc-*.mjs`                   | The CI validator, plugin/surface builders, the scaffolder, Jira sync | **source of truth**                                     |
 | `packages/aidlc-plugin/`              | The Claude Code plugin (skills + bundled framework payload)         | **generated** — `node tools/aidlc-build-plugin.mjs`     |
 | `.cursor/` `.opencode/` `.github/` persona files | Cursor / opencode / GitHub Copilot surfaces ([ADR-005](knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md)) | **generated** — `node tools/aidlc-build-surfaces.mjs`   |
 | `.claude-plugin/marketplace.json`     | The plugin marketplace this repo hosts                              | hand-maintained                                         |

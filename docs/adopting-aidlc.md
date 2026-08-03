@@ -6,7 +6,7 @@ Ten minutes of setup, and the human doing it needs no framework knowledge: the i
 
 ## Prerequisites
 
-- **Claude Code** (CLI or desktop) — needed once, by whoever runs the scaffold; after that, teammates can work from Claude Code, Cursor, opencode, or GitHub Copilot
+- **Claude Code** (CLI or desktop) — recommended, by whoever runs the scaffold (the interview flow is smoothest there); teams without it scaffold via `npx github:ss-trigent/aidlc` instead (see [Working from Cursor, opencode, or GitHub Copilot](#working-from-cursor-opencode-or-github-copilot)). After setup, teammates work from Claude Code, Cursor, opencode, or GitHub Copilot
 - A **GitHub repository** — approvals are PR reviews and status derives from GitHub, so this is load-bearing, not a preference
 - **Node 20+** available in CI and locally — `aidlc-check.mjs` is a plain Node script with no dependencies
 - Branch protection requires **GitHub Pro or a public repo** if the repo is private on the Free plan (step 3 explains why it matters)
@@ -94,9 +94,15 @@ Nothing to install. The scaffold pins the personas into the repository for every
 
 All of these are generated from the same `.claude/` sources by `tools/aidlc-build-surfaces.mjs` and drift-checked in CI (check 13), so a teammate on Cursor and one on Claude Code are always running the identical persona.
 
-**Team with no Claude Code at all?** You can bootstrap without the plugin: clone [`ss-trigent/aidlc`](https://github.com/ss-trigent/aidlc), then in your target repo have your editor's AI agent follow `packages/aidlc-plugin/skills/aidlc-init/SKILL.md` from the clone, reading `$CLAUDE_PLUGIN_ROOT` as the clone's `packages/aidlc-plugin` directory. The steps are plain shell plus the interview — the result is identical to a plugin-driven scaffold, and `aidlc-check` verifies it the same way.
+**Team with no Claude Code at all?** The scaffold is a plain Node script (`/aidlc-init` itself just drives it). From inside your target repo:
 
-Two things remain Claude Code–only, deliberately: the `/aidlc-init` scaffold and upgrade flow (it needs the plugin's bundled payload), and tool-level enforcement of the read-only personas — Cursor and Copilot can't restrict an agent's tools, so there Architect and Manager carry an injected read-only notice and the charter rule stands on the model. The gates never move with the editor either way: approval is a GitHub PR review and `aidlc-check` is the required status no matter which assistant drafted the work.
+```bash
+npx github:ss-trigent/aidlc
+```
+
+(or clone [`ss-trigent/aidlc`](https://github.com/ss-trigent/aidlc) and run `node <clone>/tools/aidlc-scaffold.mjs /path/to/your-repo`). It installs the framework, pins the personas for every editor, seeds the traceability manifest and artifact homes, points `AGENTS.md` at the framework, writes the `aidlc-check` CI workflow if the repo has none, and verifies — identical output to the plugin flow, and it refuses to overwrite anything that differs. Afterwards, tailor the seeds: open your editor, run `/aidlc`, and say "we just scaffolded — tailor the standards to this repo" (`ai/standards/` and `ai/project-context.md` still describe the reference project until then).
+
+One thing remains Claude Code–only, deliberately: tool-level enforcement of the read-only personas — Cursor and Copilot can't restrict an agent's tools, so there Architect and Manager carry an injected read-only notice and the charter rule stands on the model. The gates never move with the editor either way: approval is a GitHub PR review and `aidlc-check` is the required status no matter which assistant drafted the work.
 
 ## Where distribution goes next
 

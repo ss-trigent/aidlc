@@ -23,6 +23,8 @@ Or jump straight to a persona: `/ba` `/ux` `/architect` `/dev` `/qa` `/devops` `
 
 The scaffold pins the personas into the repo for **every editor** — Claude Code (`.claude/`), Cursor (`.cursor/`), opencode (`.opencode/`) and GitHub Copilot (`.github/`) — so teammates on those editors need nothing installed; cloning the repo is their setup, and `aidlc-check` keeps all four surfaces in sync.
 
+No Claude Code on the team? The scaffold `/aidlc-init` drives is a plain Node script (`framework/tools/aidlc-scaffold.mjs`) — run `npx github:ss-trigent/aidlc` from inside the target repo for the identical result, then tailor the standards via `/aidlc` in any editor.
+
 Full adoption walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades: [`docs/adopting-aidlc.md`](../../docs/adopting-aidlc.md).
 
 Optional companion: [mattpocock/skills](https://github.com/mattpocock/skills) — personas can invoke its techniques (`grilling`, `tdd`, `domain-modeling`, `triage`, ...) as sub-skills while staying bound by their charters and gates. See the mapping table in `framework/ai/AI-DLC.md` §Companion skills.
@@ -33,7 +35,7 @@ Optional companion: [mattpocock/skills](https://github.com/mattpocock/skills) �
 | --------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
 | `skills/`                         | 8 persona skills + `/aidlc-init` scaffolder              | **generated** — `tools/aidlc-build-plugin.mjs` |
 | `framework/ai/`                   | Charters, gates, templates, standards, interaction rules | **generated** — copied from this repo's `ai/`  |
-| `framework/tools/aidlc-check.mjs` | The policy-as-code CI validator                          | **generated** — copied from `tools/`           |
+| `framework/tools/*.mjs`           | The policy-as-code CI validator, the persona-surface builder, the Jira boundary, and the deterministic scaffolder (`aidlc-scaffold.mjs`) | **generated** — copied from `tools/`           |
 | `framework/seed/`                 | Fresh-repo manifest skeleton + CI step snippet           | **generated**                                  |
 | `.claude-plugin/plugin.json`      | Plugin manifest                                          | hand-maintained                                |
 
