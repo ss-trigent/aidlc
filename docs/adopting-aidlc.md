@@ -6,7 +6,7 @@ Ten minutes of setup, and the human doing it needs no framework knowledge: the i
 
 ## Prerequisites
 
-- **Claude Code** (CLI or desktop) — the personas run as plugin skills inside it
+- **Claude Code** (CLI or desktop) — needed once, by whoever runs the scaffold; after that, teammates can work from Claude Code, Cursor, opencode, or GitHub Copilot
 - A **GitHub repository** — approvals are PR reviews and status derives from GitHub, so this is load-bearing, not a preference
 - **Node 20+** available in CI and locally — `aidlc-check.mjs` is a plain Node script with no dependencies
 - Branch protection requires **GitHub Pro or a public repo** if the repo is private on the Free plan (step 3 explains why it matters)
@@ -20,7 +20,7 @@ In Claude Code, from any directory:
 /plugin install aidlc@trigent-aidlc
 ```
 
-That's the whole install. The plugin carries the persona skills (`/aidlc`, `/ba`, `/ux`, `/architect`, `/dev`, `/qa`, `/devops`, `/manager`), the `/aidlc-init` scaffolder, and the full framework payload it scaffolds from — adopting repos never need per-repo skill files.
+That's the whole install. The plugin carries the persona skills (`/aidlc`, `/ba`, `/ux`, `/architect`, `/dev`, `/qa`, `/devops`, `/manager`), the `/aidlc-init` scaffolder, and the full framework payload it scaffolds from. Only the person running the scaffold needs it — the scaffold pins the personas into the repo itself for every editor.
 
 ## Step 2 — Scaffold the repo: `/aidlc-init`
 
@@ -33,12 +33,13 @@ Open Claude Code **in the repository you're adopting into** and run:
 One command, one interview. What it does, in order:
 
 1. **Refuses to overwrite** — if `ai/AI-DLC.md` already exists it offers an upgrade diff instead of a blind reinstall
-2. **Copies the framework** — `ai/` (charters, gates, templates, quality bars, interaction rules) and `tools/aidlc-check.mjs` (the CI validator)
-3. **Tailors the project-owned files to your stack.** It first detects what the repo already answers (package manager, frameworks, test runner, DB layer), then interviews you in plain language — what the product is, whatever detection couldn't settle, conventions your team already has (which win over the seed's). It then rewrites `ai/standards/*.md` for *your* stack and generates `ai/project-context.md`, which every persona reads before working. The shipped standards come from this reference project (Nx + NestJS + Angular + TypeORM) and are a seed for form, not content — the interview exists so they never land unchanged in a different stack
-4. **Seeds traceability** — `knowledge/traceability/manifest.json` plus the generated matrix view
-5. **Creates artifact homes** — `inception/` for requirements, stories and screen specs; `knowledge/decisions/` for ADRs
-6. **Wires CI** — shows you the one-line CI step to add (step 3 below)
-7. **Points agents at it** — appends the AI-DLC section to `AGENTS.md` (and `CLAUDE.md` if present) so any agent in the repo knows the rules
+2. **Copies the framework** — `ai/` (charters, gates, templates, quality bars, interaction rules) and the `tools/` scripts (the CI validator, the Jira boundary, the persona-surface builder)
+3. **Installs the personas into the repo, for every editor** — the persona skills and delegatable agents land in `.claude/`, and the surface builder generates the Cursor (`.cursor/`), opencode (`.opencode/`) and GitHub Copilot (`.github/`) wrappers from them. Everyone on the team runs the same persona version whatever they edit with, and cloning the repo is the whole setup for non-Claude editors
+4. **Tailors the project-owned files to your stack.** It first detects what the repo already answers (package manager, frameworks, test runner, DB layer), then interviews you in plain language — what the product is, whatever detection couldn't settle, conventions your team already has (which win over the seed's). It then rewrites `ai/standards/*.md` for *your* stack and generates `ai/project-context.md`, which every persona reads before working. The shipped standards come from this reference project (Nx + NestJS + Angular + TypeORM) and are a seed for form, not content — the interview exists so they never land unchanged in a different stack
+5. **Seeds traceability** — `knowledge/traceability/manifest.json` plus the generated matrix view
+6. **Creates artifact homes** — `inception/` for requirements, stories and screen specs; `knowledge/decisions/` for ADRs
+7. **Wires CI** — shows you the one-line CI step to add (step 3 below)
+8. **Points agents at it** — appends the AI-DLC section to `AGENTS.md` (and `CLAUDE.md` if present) so any agent in the repo knows the rules
 
 It never commits — the scaffold lands through a reviewed PR like everything else in this framework.
 
@@ -75,15 +76,17 @@ After init, the adopting team **owns and freely edits**:
 | `knowledge/traceability/manifest.json` | Your project's traceability graph |
 | CI wiring | Your workflow files |
 
-Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
+Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
 
 ## Updating
 
 Update the plugin in Claude Code (`/plugin` → update, or reinstall), then run `/aidlc-init` again in the adopting repo — it detects the existing install and walks you through the upgrade diff instead of overwriting. Your project-owned files are never touched by an upgrade.
 
-## Editors other than Claude Code — current state, honestly
+## Working from Cursor, opencode, or GitHub Copilot
 
-The persona charters are tool-agnostic, and this framework repo generates Cursor, opencode, and GitHub Copilot surfaces for them ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md), built by `tools/aidlc-build-surfaces.mjs`). Adopting repos don't get those surfaces from `/aidlc-init` yet — the builder reads `.claude/` persona sources that only exist here, while plugin installs carry the skills inside the plugin itself. If your team needs the personas in another editor, raise it as a `change-request` — the enforcement spine (GitHub approvals + `aidlc-check` as required status) already works regardless of which assistant drafts the work.
+Nothing to install. The scaffold pins the personas into the repository for every editor ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md)): Cursor users get `/ba`, `/dev` etc. as commands plus skills and delegatable agents under `.cursor/`; opencode reads `.opencode/`; Copilot reads `.github/` prompts, skills and agents. All of them are generated from the same `.claude/` sources by `tools/aidlc-build-surfaces.mjs` and drift-checked in CI, so a teammate on Cursor and one on Claude Code are always running the identical persona.
+
+Two things remain Claude Code–only, deliberately: the `/aidlc-init` scaffold and upgrade flow (it needs the plugin's bundled payload), and tool-level enforcement of the read-only personas — Cursor and Copilot can't restrict an agent's tools, so there Architect and Manager carry an injected read-only notice and the charter rule stands on the model. The gates never move with the editor either way: approval is a GitHub PR review and `aidlc-check` is the required status no matter which assistant drafted the work.
 
 ## Where distribution goes next
 

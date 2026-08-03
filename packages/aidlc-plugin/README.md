@@ -21,6 +21,8 @@ Then, in the repo you want to run AI-DLC in:
 
 Or jump straight to a persona: `/ba` `/ux` `/architect` `/dev` `/qa` `/devops` `/manager`.
 
+The scaffold pins the personas into the repo for **every editor** — Claude Code (`.claude/`), Cursor (`.cursor/`), opencode (`.opencode/`) and GitHub Copilot (`.github/`) — so teammates on those editors need nothing installed; cloning the repo is their setup, and `aidlc-check` keeps all four surfaces in sync.
+
 Full adoption walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades: [`docs/adopting-aidlc.md`](../../docs/adopting-aidlc.md).
 
 Optional companion: [mattpocock/skills](https://github.com/mattpocock/skills) — personas can invoke its techniques (`grilling`, `tdd`, `domain-modeling`, `triage`, ...) as sub-skills while staying bound by their charters and gates. See the mapping table in `framework/ai/AI-DLC.md` §Companion skills.

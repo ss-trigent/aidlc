@@ -24,7 +24,7 @@
     "ai/templates/pr-description.md": "6e9b3159b11b0d106907b1a41d71e96a337247816ba1e5b571c40eb8fcd69e5f",
     "ai/templates/screen-spec.md": "2de4ffe9cd92600149328f3854bd530098af11d7c6a1cdae011a292dbd6cec51",
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
-    "tools/aidlc-build-plugin.mjs": "afe95456cb533a538ffc28b7cac378f74801a21859df49f2495130122782e597",
+    "tools/aidlc-build-plugin.mjs": "36589778902fa31b489bc3f47ec75983a22163fb447dba7ae4d9f4309e414407",
     "tools/aidlc-build-surfaces.mjs": "abf119d62366cc564a52d5fd5db146b65faf3a7bf09feea5ad69c0957df90c0f",
     "tools/aidlc-check.mjs": "232c1fe2cead15082bc78c2f07e352b6f3d358042e9e5f864ce4a3dbb155d15e",
     "tools/aidlc-jira.mjs": "6e87c26c4732c0fca02d90d5b8b32569f3e326a38f19ab45812245d25f115744"
