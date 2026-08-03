@@ -1,0 +1,13 @@
+{
+  "name": "trigent-aidlc",
+  "owner": {
+    "name": "ss-trigent"
+  },
+  "plugins": [
+    {
+      "name": "aidlc",
+      "source": "./packages/aidlc-plugin",
+      "description": "AI-DLC framework: role-persona AI juniors, three CI-enforced gates, GitHub-review approvals, validated traceability. /aidlc-init scaffolds any repo."
+    }
+  ]
+}

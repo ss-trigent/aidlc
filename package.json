@@ -1,0 +1,14 @@
+{
+  "name": "aidlc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-DLC: an AI-Driven Development Lifecycle framework — seven role-persona AI juniors driving three CI-enforced gates, with GitHub-review approvals and a validated traceability graph. Distributed as a Claude Code plugin.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node tools/aidlc-check.mjs",
+    "build:plugin": "node tools/aidlc-build-plugin.mjs",
+    "build:surfaces": "node tools/aidlc-build-surfaces.mjs"
+  }
+}

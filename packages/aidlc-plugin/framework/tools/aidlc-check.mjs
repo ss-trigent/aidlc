@@ -1,0 +1,838 @@
+// aidlc-check — policy-as-code for the AI-DLC framework. Required CI status.
+//
+//   node tools/aidlc-check.mjs                validate (exit 1 on any error)
+//   node tools/aidlc-check.mjs --write        also regenerate the generated views:
+//                                             traceability-matrix.md and design/tokens.json
+//   node tools/aidlc-check.mjs --delivery=US-002[,US-003]
+//                                             force these stories to be treated as
+//                                             in-delivery (normally derived from the branch)
+//   node tools/aidlc-check.mjs --lock         regenerate ai/framework-lock.json
+//                                             (framework maintainers only — an adopting
+//                                             project never runs this)
+//
+// Validates what prose cannot enforce:
+//   1. artifact IDs (REQ/NFR/RISK/US/AC/SCR/ST/ADR) are unique across the repo
+//   2. knowledge/traceability/manifest.json links resolve, bidirectionally —
+//      every requirement a story cites must itself be a node in the graph
+//   3. story AC lists in the manifest match the AC headings in the story files
+//   4. listed test files exist and cite every AC of their story (US-###/AC-##)
+//      in the title of an ACTIVE test — citations in comments or skipped tests
+//      (it.skip/xit/describe.skip) are not proof. For a story IN DELIVERY
+//      (branch feat/US-###-*), having no tests at all is an error, not a warning
+//   5. spec files citing a US are listed in that story's manifest entry (no stale manifest)
+//   6. product projects (api, ui, graph-engine) declare a test target
+//   7. traceability-matrix.md matches what the manifest generates (no hand edits)
+//   8. knowledge-graph edges resolve: story decisions[] -> defined ADRs,
+//      lessons[] entries are well-formed and link to real artifacts
+//   9. the distributable plugin payload matches its sources
+//      (tools/aidlc-build-plugin.mjs --check)
+//  10. every persona has a charter + skill + agent that agree, and personas
+//      with no authority to change things (architect, manager) are read-only
+//      by tooling — their agent must disallow Write and Edit
+//  12. Jira ticket templates parse, use only known placeholders, and declare no
+//      field that would forward approval or duplicate what Jira owns. Recorded
+//      ticket keys are well-formed. Jira is a tracking mirror, so a MISSING key
+//      is never an error — Jira going away must not break the build.
+//  11. design is enforced, not conventional: a story with a UI section cites a
+//      screen; a screen's ST-## states match its manifest entry and are each
+//      rendered+marked in one of its component previews; component previews
+//      exist and contain no raw hex; inception/design/tokens.json is generated
+//      from tokens.css (the designer's tool-agnostic export) and never hand-edited
+//  13. the per-tool persona surfaces (Cursor, opencode, GitHub Copilot) match
+//      their .claude/ sources (tools/aidlc-build-surfaces.mjs --check, ADR-005)
+//  14. framework-owned files match ai/framework-lock.json (SHA-256 per file).
+//      Adopting teams edit only project-owned paths (ai/standards/,
+//      ai/templates/jira/); an edited or deleted framework file fails the
+//      build until reverted — framework changes go upstream as change requests
+import {
+  readFileSync,
+  readdirSync,
+  statSync,
+  existsSync,
+  writeFileSync,
+} from 'node:fs';
+import { join, relative } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+
+const REPO = process.cwd();
+const errors = [];
+const warnings = [];
+const err = (m) => errors.push(m);
+const warn = (m) => warnings.push(m);
+
+function walk(dir, pred, acc = []) {
+  if (!existsSync(dir)) return acc;
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules' || name === 'dist' || name.startsWith('.'))
+      continue;
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) walk(p, pred, acc);
+    else if (pred(p)) acc.push(p);
+  }
+  return acc;
+}
+const rel = (p) => relative(REPO, p);
+
+// An AC counts as proven only when cited in the title of an active `it(`/`test(`
+// (`.each` allowed) — a citation in a comment or a skipped test is not proof.
+// Nested parens inside `.each(...)` args aren't parsed; cite in a plain test if hit.
+const citesAc = (contents, us, ac) =>
+  new RegExp(
+    '(?<![\\w.])(?:it|test)(?:\\.each\\([^)]*\\))?\\s*\\(\\s*[`\'"][^`\'"\\n]*' +
+      `${us}/${ac}`,
+  ).test(contents);
+const SKIPPED_TEST =
+  /\b(?:describe|it|test)\.skip\s*\(|\bx(?:it|test|describe)\s*\(/;
+
+// Which stories are in delivery right now? Status lives on GitHub, not in files,
+// so this is derived from the branch under review — GITHUB_HEAD_REF on a PR,
+// otherwise the checked-out branch — against the documented Gate 2 convention
+// `feat/US-###-<slug>`. On a delivery branch, "no tests yet" stops being an
+// acceptable pre-delivery state and becomes a hard failure.
+function deliveryStories() {
+  const flag = process.argv.find((a) => a.startsWith('--delivery='));
+  if (flag)
+    return new Set(flag.slice('--delivery='.length).split(',').filter(Boolean));
+  let ref = process.env.GITHUB_HEAD_REF || '';
+  if (!ref) {
+    try {
+      ref = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+        .toString()
+        .trim();
+    } catch {
+      ref = ''; // not a git checkout — treat nothing as in-delivery
+    }
+  }
+  const m = ref.match(/^feat\/(US-\d{3})\b/);
+  return new Set(m ? [m[1]] : []);
+}
+const inDelivery = deliveryStories();
+
+// ---- 1. collect ID definitions and reject duplicates -----------------------
+const defs = new Map(); // id -> [files]
+const define = (id, file) => defs.set(id, [...(defs.get(id) ?? []), file]);
+
+for (const f of walk(join(REPO, 'inception', 'product'), (p) =>
+  p.endsWith('.md'),
+)) {
+  const text = readFileSync(f, 'utf8');
+  for (const line of text.split('\n')) {
+    const m = line.match(/^\|\s*((?:REQ|NFR|RISK)-\d{3})\s*\|/);
+    if (m) define(m[1], rel(f));
+  }
+}
+const storyFiles = walk(
+  join(REPO, 'inception', 'stories', 'user-stories'),
+  (p) => /US-\d{3}.*\.md$/.test(p),
+);
+const storyAcs = new Map(); // US-### -> Set(AC-##)
+const storyHasUi = new Set(); // stories carrying a "## UI" section
+for (const f of storyFiles) {
+  const us = rel(f).match(/US-\d{3}/)[0];
+  define(us, rel(f));
+  const text = readFileSync(f, 'utf8');
+  const acs = new Set(
+    [...text.matchAll(/^###\s+(AC-\d{2})\b/gm)].map((m) => m[1]),
+  );
+  storyAcs.set(us, acs);
+  for (const ac of acs) define(`${us}/${ac}`, rel(f));
+  if (/^##\s+UI\b/m.test(text)) storyHasUi.add(us);
+}
+for (const f of walk(join(REPO, 'knowledge', 'decisions'), (p) =>
+  /ADR-\d{3}.*\.md$/.test(p),
+)) {
+  define(rel(f).match(/ADR-\d{3}/)[0], rel(f));
+}
+// Screen specs: the UX persona's Gate 1 artifact. States (ST-##) are numbered
+// per screen for the same reason ACs are numbered per story — an unnumbered
+// state is one nobody notices is missing.
+const screenFiles = walk(join(REPO, 'inception', 'design', 'screens'), (p) =>
+  /SCR-\d{3}.*\.md$/.test(p),
+);
+const screenStates = new Map(); // SCR-### -> Set(ST-##)
+for (const f of screenFiles) {
+  const scr = rel(f).match(/SCR-\d{3}/)[0];
+  define(scr, rel(f));
+  const states = new Set(
+    [...readFileSync(f, 'utf8').matchAll(/^###\s+(ST-\d{2})\b/gm)].map(
+      (m) => m[1],
+    ),
+  );
+  screenStates.set(scr, states);
+  for (const st of states) define(`${scr}/${st}`, rel(f));
+}
+for (const [id, files] of defs) {
+  if (files.length > 1)
+    err(`duplicate ID ${id} defined in: ${files.join(', ')}`);
+}
+
+// ---- 2–4. manifest resolution, bidirectionality, AC/test coverage ----------
+const manifestPath = join(REPO, 'knowledge', 'traceability', 'manifest.json');
+let manifest;
+try {
+  manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+} catch (e) {
+  err(`cannot read ${rel(manifestPath)}: ${e.message}`);
+}
+
+if (manifest) {
+  const reqs = manifest.requirements ?? {};
+  const stories = manifest.stories ?? {};
+
+  for (const [req, entry] of Object.entries(reqs)) {
+    if (!defs.has(req))
+      err(`manifest requirement ${req} is not defined in any BRD`);
+    for (const us of entry.stories) {
+      if (!stories[us])
+        err(`manifest: ${req} lists ${us}, which has no story entry`);
+      else if (!stories[us].requirements.includes(req))
+        err(
+          `manifest not bidirectional: ${req} -> ${us}, but ${us} does not list ${req}`,
+        );
+    }
+    // Reverse of the design-first edge: a screen may trace to a requirement
+    // before any story exists (stories are drafted last, once scope locks), so
+    // requirements carry an optional screens[] the screen must mirror.
+    for (const scr of entry.screens ?? []) {
+      const screenNodes = manifest.screens ?? {};
+      if (!screenNodes[scr])
+        err(`manifest: ${req} lists screen ${scr}, which has no screen entry`);
+      else if (!(screenNodes[scr].requirements ?? []).includes(req))
+        err(
+          `manifest not bidirectional: ${req} -> ${scr}, but ${scr} does not list ${req} in requirements[]`,
+        );
+    }
+    if (entry.stories.length === 0)
+      warn(`${req} has no covering story (unscheduled scope)`);
+  }
+
+  for (const [us, entry] of Object.entries(stories)) {
+    if (!defs.has(us))
+      err(
+        `manifest story ${us} has no story file in inception/stories/user-stories/`,
+      );
+    if (entry.artifact && !existsSync(join(REPO, entry.artifact)))
+      err(`manifest: ${us} artifact path missing: ${entry.artifact}`);
+    if (entry.requirements.length === 0)
+      err(`${us} traces to no requirement (orphan story)`);
+    for (const req of entry.requirements) {
+      if (!defs.has(req)) err(`${us} references undefined requirement ${req}`);
+      // A requirement absent from manifest.requirements is a one-way edge: it
+      // never appears in the matrix and never gets coverage accounting. NFRs
+      // used to slip through here — every cited requirement must be a node.
+      if (!reqs[req])
+        err(
+          `${us} cites ${req}, which is not a node in manifest.requirements — add "${req}": { "stories": ["${us}"] } so the edge is bidirectional and ${req} appears in the matrix`,
+        );
+      else if (!reqs[req].stories.includes(us))
+        err(
+          `manifest not bidirectional: ${us} -> ${req}, but ${req} does not list ${us}`,
+        );
+    }
+    for (const adr of entry.decisions ?? []) {
+      if (!defs.has(adr))
+        err(`${us}: decisions lists ${adr}, which is not a defined ADR`);
+    }
+    const fileAcs = storyAcs.get(us);
+    if (fileAcs) {
+      const manifestAcs = new Set(entry.acs);
+      for (const ac of manifestAcs)
+        if (!fileAcs.has(ac))
+          err(
+            `${us}: manifest lists ${ac}, story file has no "### ${ac}" heading`,
+          );
+      for (const ac of fileAcs)
+        if (!manifestAcs.has(ac))
+          err(`${us}: story file defines ${ac}, missing from manifest acs`);
+    }
+    if (entry.tests.length === 0) {
+      if (inDelivery.has(us))
+        err(
+          `${us} is in delivery (branch feat/${us}-…) but lists no tests — each of its AC needs a test citing "${us}/AC-##" in the same PR (ai/gates/delivery.md)`,
+        );
+      else warn(`${us} has no tests yet (pre-delivery)`);
+    } else {
+      const contents = entry.tests
+        .map((t) => {
+          if (!existsSync(join(REPO, t))) {
+            err(`${us}: listed test file missing: ${t}`);
+            return '';
+          }
+          const text = readFileSync(join(REPO, t), 'utf8');
+          if (SKIPPED_TEST.test(text))
+            err(
+              `${us}: ${t} contains skipped tests (it.skip/xit/describe.skip) — skipped tests cannot serve as AC proof (testing-standards: a red test is never skipped)`,
+            );
+          return text;
+        })
+        .join('\n');
+      for (const ac of entry.acs) {
+        if (!citesAc(contents, us, ac))
+          err(
+            `${us}: no listed test cites "${us}/${ac}" in an active test title — AC unproven`,
+          );
+      }
+    }
+  }
+
+  // ---- 11. design edges: story <-> screen <-> state <-> component ----------
+  // The design phase is only "enforced" if a missing screen, an undesigned
+  // state, or a component that does not exist can fail a build. Same shape as
+  // the AC/test rule: incomplete is a warning before delivery and an error
+  // once the story is on its feat/ branch, because that is the last moment
+  // the gap is still cheap.
+  const screens = manifest.screens ?? {};
+  const screenInDelivery = (entry) =>
+    (entry.stories ?? []).some((us) => inDelivery.has(us));
+
+  for (const [scr, entry] of Object.entries(screens)) {
+    if (!defs.has(scr))
+      err(
+        `manifest screen ${scr} has no spec file in inception/design/screens/`,
+      );
+    if (entry.artifact && !existsSync(join(REPO, entry.artifact)))
+      err(`manifest: ${scr} artifact path missing: ${entry.artifact}`);
+
+    // Design comes before stories: a screen is drawn from an approved
+    // requirement and only gains its story edge once scope locks. So a screen
+    // is an orphan only when it traces to neither — a screen that traces to
+    // *something* is a brief, not decoration.
+    if (
+      (entry.stories ?? []).length === 0 &&
+      (entry.requirements ?? []).length === 0
+    )
+      err(
+        `${scr} traces to neither a story nor a requirement (orphan screen) — a screen that traces to nothing is decoration`,
+      );
+    for (const us of entry.stories ?? []) {
+      if (!stories[us])
+        err(`manifest: ${scr} lists ${us}, which has no story entry`);
+      else if (!(stories[us].screens ?? []).includes(scr))
+        err(
+          `manifest not bidirectional: ${scr} -> ${us}, but ${us} does not list ${scr} in screens[]`,
+        );
+    }
+    for (const req of entry.requirements ?? []) {
+      if (!reqs[req])
+        err(
+          `manifest: ${scr} cites ${req}, which is not a node in manifest.requirements — add "${req}": { "stories": [], "screens": ["${scr}"] } so the edge is bidirectional`,
+        );
+      else if (!(reqs[req].screens ?? []).includes(scr))
+        err(
+          `manifest not bidirectional: ${scr} -> ${req}, but ${req} does not list ${scr} in screens[]`,
+        );
+    }
+
+    // states in the manifest match the ST-## headings in the spec
+    const fileStates = screenStates.get(scr);
+    if (fileStates) {
+      const manifestStates = new Set(entry.states ?? []);
+      for (const st of manifestStates)
+        if (!fileStates.has(st))
+          err(
+            `${scr}: manifest lists ${st}, spec file has no "### ${st}" heading`,
+          );
+      for (const st of fileStates)
+        if (!manifestStates.has(st))
+          err(`${scr}: spec defines ${st}, missing from manifest states`);
+      if (fileStates.size === 0)
+        err(
+          `${scr} enumerates no states — every screen has at least a default state (ai/templates/screen-spec.md)`,
+        );
+    }
+
+    // components exist, are token-only, and cover every state
+    const previews = [];
+    for (const c of entry.components ?? []) {
+      const p = join(
+        REPO,
+        'inception',
+        'design',
+        'components',
+        c,
+        'preview.html',
+      );
+      if (!existsSync(p)) {
+        err(
+          `${scr}: component "${c}" has no preview at inception/design/components/${c}/preview.html`,
+        );
+        continue;
+      }
+      const html = readFileSync(p, 'utf8');
+      if (!/^\s*<!--\s*@dsCard\b/.test(html))
+        err(
+          `inception/design/components/${c}/preview.html must open with its card marker <!-- @dsCard group="…" --> (inception/design/README.md)`,
+        );
+      // Raw colour literals defeat the token export the designer imports.
+      // Previews inline the token definitions on purpose (they must open with
+      // no build step), so the :root blocks are exactly where hex belongs and
+      // are excluded — everywhere else, a literal is a finding.
+      const hex = html
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/:root\s*\{[^}]*\}/g, '')
+        .match(/#[0-9a-fA-F]{3,8}\b/g);
+      if (hex)
+        err(
+          `inception/design/components/${c}/preview.html hard-codes colour (${[...new Set(hex)].slice(0, 3).join(', ')}) — components reference tokens only, or inception/design/tokens.json stops describing what renders`,
+        );
+      previews.push(html);
+    }
+
+    if ((entry.components ?? []).length === 0) {
+      const msg = `${scr} lists no components — its states are specified but nothing renders them`;
+      if (screenInDelivery(entry)) err(msg);
+      else warn(`${msg} (pre-delivery)`);
+    } else {
+      const rendered = previews.join('\n');
+      for (const st of entry.states ?? []) {
+        if (!new RegExp(`@state\\s+${scr}/${st}\\b`).test(rendered)) {
+          const msg = `${scr}: no component preview renders ${st} — mark it with <!-- @state ${scr}/${st} --> where that state is shown`;
+          if (screenInDelivery(entry)) err(msg);
+          else warn(`${msg} (pre-delivery)`);
+        }
+      }
+    }
+  }
+
+  // reverse edge: a story with UI must name the screen that serves it
+  for (const [us, entry] of Object.entries(stories)) {
+    for (const scr of entry.screens ?? []) {
+      if (!screens[scr])
+        err(
+          `${us} cites ${scr}, which is not a node in manifest.screens — add it so the edge is bidirectional`,
+        );
+      else if (!(screens[scr].stories ?? []).includes(us))
+        err(
+          `manifest not bidirectional: ${us} -> ${scr}, but ${scr} does not list ${us}`,
+        );
+    }
+    if (storyHasUi.has(us) && (entry.screens ?? []).length === 0) {
+      const msg = `${us} has a "## UI" section but cites no screen — UI would ship undesigned (/ux owns inception/design/screens/)`;
+      if (inDelivery.has(us)) err(msg);
+      else warn(`${msg} (pre-delivery)`);
+    }
+  }
+
+  // components nobody references are speculative library, not design
+  const componentsDir = join(REPO, 'inception', 'design', 'components');
+  if (existsSync(componentsDir)) {
+    const referenced = new Set(
+      Object.values(screens).flatMap((s) => s.components ?? []),
+    );
+    for (const name of readdirSync(componentsDir)) {
+      if (name.startsWith('.')) continue;
+      if (!statSync(join(componentsDir, name)).isDirectory()) continue;
+      if (!referenced.has(name))
+        warn(
+          `component "${name}" is referenced by no screen — a component earns its file when a screen needs it`,
+        );
+    }
+  }
+
+  // ---- 8. lessons-learned edges are well-formed and resolve ----------------
+  for (const [i, lesson] of (manifest.lessons ?? []).entries()) {
+    if (!lesson.date || !lesson.insight)
+      err(`lessons[${i}] needs both "date" and "insight"`);
+    for (const link of lesson.links ?? []) {
+      if (/^#\d+$/.test(link)) continue; // GitHub issue ref — lives on GitHub
+      if (!defs.has(link) && !stories[link])
+        err(`lessons[${i}] links to unknown artifact "${link}"`);
+    }
+  }
+
+  // ---- 5. reverse link: spec citations must be in the manifest -------------
+  const specs = [
+    ...walk(join(REPO, 'apps'), (p) => p.endsWith('.spec.ts')),
+    ...walk(join(REPO, 'libs'), (p) => p.endsWith('.spec.ts')),
+  ];
+  for (const spec of specs) {
+    const cited = new Set(
+      [...readFileSync(spec, 'utf8').matchAll(/US-\d{3}/g)].map((m) => m[0]),
+    );
+    for (const us of cited) {
+      if (!stories[us])
+        err(`${rel(spec)} cites ${us}, which is not in the manifest`);
+      else if (!stories[us].tests.includes(rel(spec)))
+        err(
+          `stale manifest: ${rel(spec)} cites ${us} but is not listed in its tests[]`,
+        );
+    }
+  }
+
+  // ---- 7. matrix view is generated, not hand-edited ------------------------
+  const view = generateMatrix(reqs, stories);
+  const matrixPath = join(
+    REPO,
+    'knowledge',
+    'traceability',
+    'traceability-matrix.md',
+  );
+  if (process.argv.includes('--write')) {
+    writeFileSync(matrixPath, view);
+    console.log(`wrote ${rel(matrixPath)}`);
+  } else if (
+    !existsSync(matrixPath) ||
+    readFileSync(matrixPath, 'utf8') !== view
+  ) {
+    err(
+      `traceability-matrix.md is stale or hand-edited — run: node tools/aidlc-check.mjs --write`,
+    );
+  }
+}
+
+// ---- 11b. tokens.json is generated from tokens.css --------------------------
+// The designer's half of the handoff. tokens.css is canonical because that is
+// what actually renders; tokens.json is the same set in W3C Design Tokens
+// (DTCG) form, which Figma (Tokens Studio), Penpot and others import. Deriving
+// it means the palette a designer draws with cannot drift from the palette the
+// product ships — which is the whole reason the export is worth having.
+const TOKEN_GROUPS = [
+  ['c-', 'color', 'color'],
+  ['fw-', 'fontWeight', 'fontWeight'],
+  ['f-', 'fontFamily', 'fontFamily'],
+  ['t-', 'fontSize', 'dimension'],
+  ['lh-', 'lineHeight', 'number'],
+  ['ls-', 'letterSpacing', 'dimension'],
+  ['s-', 'spacing', 'dimension'],
+  ['r-', 'radius', 'dimension'],
+  ['shadow-', 'shadow', null],
+  ['motion-', 'motion', null],
+  ['control-', 'control', 'dimension'],
+];
+
+function tokensFrom(css) {
+  const out = {};
+  for (const m of css.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
+    const name = m[1];
+    const value = m[2].replace(/\s+/g, ' ').trim();
+    const hit = TOKEN_GROUPS.find(([prefix]) => name.startsWith(prefix));
+    const [prefix, group, type] = hit ?? [null, 'other', null];
+    const key = prefix ? name.slice(prefix.length) : name;
+    out[group] ??= {};
+    out[group][key] = {
+      ...(type ? { $type: type } : {}),
+      $value: value,
+      $extensions: { 'css.variable': `--${name}` },
+    };
+  }
+  return out;
+}
+
+function generateTokens(css) {
+  // The dark set is the @media (prefers-color-scheme: dark) override block —
+  // deliberately partial, exactly like the stylesheet it comes from.
+  const cut = css.indexOf('@media');
+  const light = tokensFrom(cut === -1 ? css : css.slice(0, cut));
+  const dark = cut === -1 ? {} : tokensFrom(css.slice(cut));
+  return (
+    JSON.stringify(
+      {
+        $description:
+          'GENERATED from inception/design/tokens.css by tools/aidlc-check.mjs --write — do not edit. W3C DTCG format for import into design tools (Figma/Tokens Studio, Penpot, …). "dark" holds only the tokens the dark theme overrides, as in the stylesheet.',
+        light,
+        dark,
+      },
+      null,
+      2,
+    ) + '\n'
+  );
+}
+
+const tokensCss = join(REPO, 'inception', 'design', 'tokens.css');
+if (existsSync(tokensCss)) {
+  const tokensJson = join(REPO, 'inception', 'design', 'tokens.json');
+  const generated = generateTokens(readFileSync(tokensCss, 'utf8'));
+  if (process.argv.includes('--write')) {
+    writeFileSync(tokensJson, generated);
+    console.log(`wrote ${rel(tokensJson)}`);
+  } else if (
+    !existsSync(tokensJson) ||
+    readFileSync(tokensJson, 'utf8') !== generated
+  ) {
+    err(
+      `inception/design/tokens.json is stale or hand-edited — it is generated from tokens.css so the designer's import cannot drift from what ships. Run: node tools/aidlc-check.mjs --write`,
+    );
+  }
+}
+
+function generateMatrix(reqs, stories) {
+  let out =
+    '# Traceability matrix\n\n> GENERATED from manifest.json by tools/aidlc-check.mjs --write — do not edit.\n\n| Requirement | Stories | AC proven | Status |\n|---|---|---|---|\n';
+  for (const [req, entry] of Object.entries(reqs)) {
+    const usList = entry.stories.join(', ') || '—';
+    let proven = 0,
+      total = 0,
+      delivered = true;
+    for (const us of entry.stories) {
+      const s = stories[us];
+      if (!s) continue;
+      total += s.acs.length;
+      if (s.tests.length === 0) {
+        delivered = false;
+        continue;
+      }
+      const contents = s.tests
+        .filter((t) => existsSync(join(REPO, t)))
+        .map((t) => readFileSync(join(REPO, t), 'utf8'))
+        .join('\n');
+      proven += s.acs.filter((ac) => citesAc(contents, us, ac)).length;
+    }
+    const status =
+      entry.stories.length === 0
+        ? 'unscheduled'
+        : total > 0 && proven === total && delivered
+          ? 'delivered'
+          : proven > 0
+            ? 'in progress'
+            : 'planned';
+    out += `| ${req} | ${usList} | ${total ? `${proven}/${total}` : '—'} | ${status} |\n`;
+  }
+  return out;
+}
+
+// ---- 6. product projects declare test targets -------------------------------
+const targets = [
+  [
+    'api',
+    'apps/api/package.json',
+    (j) => j.nx?.targets?.test || j.scripts?.test,
+  ],
+  ['ui', 'apps/ui/project.json', (j) => j.targets?.test],
+  [
+    'graph-engine',
+    'libs/graph-engine/package.json',
+    (j) => j.nx?.targets?.test || j.scripts?.test,
+  ],
+];
+for (const [name, file, get] of targets) {
+  try {
+    if (!get(JSON.parse(readFileSync(join(REPO, file), 'utf8'))))
+      err(
+        `project "${name}" has no test target (${file}) — untestable product code`,
+      );
+  } catch (e) {
+    // The target list describes the reference project; repos without a listed
+    // project (the framework repo itself, adopting repos with other layouts)
+    // skip it — story tests are still enforced per-AC by check 4.
+    if (e.code === 'ENOENT')
+      warn(`project "${name}" not present (${file}) — test-target check skipped`);
+    else err(`cannot check test target for "${name}": ${e.message}`);
+  }
+}
+
+// ---- 10. persona surfaces are complete and authority limits hold ------------
+// Each persona exists three times: a charter (the contract), a skill (human
+// invokes it), and an agent (delegated to). They must agree. Personas whose
+// charter grants NO authority to change things must be read-only *by tooling*,
+// not by good intentions — so their agent has to disallow the write tools.
+const PERSONAS = ['ba', 'ux', 'architect', 'dev', 'qa', 'devops', 'manager'];
+const READ_ONLY = {
+  architect: 'its review is advisory — the human review is the authority',
+  manager: 'it holds no gate authority; status is derived, never authored',
+};
+for (const p of PERSONAS) {
+  const charter = join(REPO, 'ai', 'roles', `${p}.md`);
+  const skill = join(REPO, '.claude', 'skills', p, 'SKILL.md');
+  const agent = join(REPO, '.claude', 'agents', `aidlc-${p}.md`);
+  if (!existsSync(charter))
+    err(`persona "${p}" has no charter at ai/roles/${p}.md`);
+  if (!existsSync(skill))
+    err(`persona "${p}" has no skill at .claude/skills/${p}/SKILL.md`);
+  if (!existsSync(agent)) {
+    err(`persona "${p}" has no agent at .claude/agents/aidlc-${p}.md`);
+    continue;
+  }
+  const text = readFileSync(agent, 'utf8');
+  const fm = text.split('---')[1] ?? '';
+  const declared = fm.match(/^name:\s*(\S+)/m)?.[1];
+  if (declared !== `aidlc-${p}`)
+    err(
+      `.claude/agents/aidlc-${p}.md declares name "${declared}" — must be "aidlc-${p}" or delegation resolves the wrong agent`,
+    );
+  if (!text.includes(`ai/roles/${p}.md`))
+    err(
+      `.claude/agents/aidlc-${p}.md never points at its charter (ai/roles/${p}.md) — the agent would drift from the contract`,
+    );
+  if (READ_ONLY[p]) {
+    const dis = fm.match(/^disallowedTools:\s*(.+)$/m)?.[1] ?? '';
+    for (const tool of ['Write', 'Edit']) {
+      if (!new RegExp(`\\b${tool}\\b`).test(dis))
+        err(
+          `.claude/agents/aidlc-${p}.md must disallow ${tool}: ${READ_ONLY[p]}. Add it to disallowedTools`,
+        );
+    }
+  }
+}
+
+// ---- 12. Jira templates are safe and recorded keys are well-formed ----------
+// The templates are client-visible and the tool that fills them is the only
+// writer, so the rules live in one place (tools/aidlc-jira.mjs) and are asserted
+// here. Nothing in this block can fail because Jira is unreachable — by design.
+if (existsSync(join(REPO, 'ai', 'templates', 'jira'))) {
+  try {
+    const { validateTemplates } = await import(
+      pathToFileURL(join(REPO, 'tools', 'aidlc-jira.mjs')).href
+    );
+    for (const p of validateTemplates()) err(p);
+  } catch (e) {
+    err(`cannot validate Jira templates: ${e.message}`);
+  }
+
+  const KEY = /^[A-Z][A-Z0-9]+-\d+$/;
+  const project = process.env.JIRA_PROJECT_KEY;
+  for (const [bucket, label] of [
+    [manifest?.stories ?? {}, 'story'],
+    [manifest?.epics ?? {}, 'epic'],
+  ]) {
+    for (const [id, entry] of Object.entries(bucket)) {
+      if (entry.jira === undefined) continue;
+      if (typeof entry.jira !== 'string' || !KEY.test(entry.jira))
+        err(
+          `${label} ${id}: jira key "${entry.jira}" is not a Jira issue key (expected e.g. "LOG-142")`,
+        );
+      else if (project && !entry.jira.startsWith(`${project}-`))
+        warn(
+          `${label} ${id}: jira key ${entry.jira} is not in JIRA_PROJECT_KEY (${project}) — tracking a ticket in another project?`,
+        );
+    }
+  }
+}
+
+// ---- 9. plugin payload matches its sources ----------------------------------
+if (existsSync(join(REPO, 'packages', 'aidlc-plugin'))) {
+  try {
+    execFileSync(
+      'node',
+      [join(REPO, 'tools', 'aidlc-build-plugin.mjs'), '--check'],
+      { stdio: 'pipe' },
+    );
+  } catch (e) {
+    err(`plugin drift: ${e.stderr?.toString().trim() || e.message}`);
+  }
+}
+
+// ---- 13. per-tool persona surfaces match their sources -----------------------
+// Cursor/opencode/Copilot wrappers are generated from .claude/skills and
+// .claude/agents (ADR-005). Skipped where the builder is absent — an installed
+// repo without multi-tool surfaces is not broken.
+if (existsSync(join(REPO, 'tools', 'aidlc-build-surfaces.mjs'))) {
+  try {
+    execFileSync(
+      'node',
+      [join(REPO, 'tools', 'aidlc-build-surfaces.mjs'), '--check'],
+      { stdio: 'pipe' },
+    );
+  } catch (e) {
+    err(`tool-surface drift: ${e.stderr?.toString().trim() || e.message}`);
+  }
+}
+
+// ---- 14. framework-owned files match the shipped lock ------------------------
+// The ownership split of the shared framework: adopting teams own what init
+// generates for them (ai/standards/, ai/templates/jira/, the manifest, CI
+// wiring) and never edit the framework itself (gates, roles, quality, context,
+// the artifact templates, the aidlc-* tools). That rule is enforced the only
+// way rules survive here — by CI: ai/framework-lock.json records a SHA-256 per
+// framework-owned file, and any edit or deletion goes red until reverted.
+// Wanting a different gate rule is legitimate — it goes upstream as a
+// change-request against the framework, not a local edit.
+//
+// The lock regenerates via --lock only, deliberately NOT via --write: --write
+// is routine (matrix, tokens) and would silently re-bless local edits.
+const LOCK_PATH = join(REPO, 'ai', 'framework-lock.json');
+// ai/project-context.md is generated per-project by /aidlc-init's interview —
+// it exists only in adopting repos and is theirs, like the standards.
+const PROJECT_OWNED = [
+  'ai/standards/',
+  'ai/templates/jira/',
+  'ai/project-context.md',
+];
+const FRAMEWORK_TOOLS = [
+  'aidlc-check.mjs',
+  'aidlc-jira.mjs',
+  'aidlc-build-plugin.mjs',
+  'aidlc-build-surfaces.mjs',
+];
+// CRLF-normalized so a Windows autocrlf checkout doesn't read as tampering
+const hashFile = (p) =>
+  createHash('sha256')
+    .update(readFileSync(p, 'utf8').replace(/\r\n/g, '\n'))
+    .digest('hex');
+
+function frameworkLockedFiles() {
+  const acc = [];
+  for (const f of walk(join(REPO, 'ai'), () => true)) {
+    const r = rel(f);
+    if (r === rel(LOCK_PATH)) continue;
+    if (PROJECT_OWNED.some((d) => r.startsWith(d))) continue;
+    acc.push(r);
+  }
+  for (const t of FRAMEWORK_TOOLS) {
+    if (existsSync(join(REPO, 'tools', t))) acc.push(join('tools', t));
+  }
+  return acc.sort();
+}
+
+if (process.argv.includes('--lock')) {
+  const files = {};
+  for (const r of frameworkLockedFiles()) files[r] = hashFile(join(REPO, r));
+  writeFileSync(
+    LOCK_PATH,
+    JSON.stringify(
+      {
+        $description:
+          'GENERATED by tools/aidlc-check.mjs --lock (framework maintainers only) — SHA-256 per framework-owned file. Adopting projects never edit these files or this lock; project-specific rules live in ai/standards/ and ai/templates/jira/. To change the framework, open a change-request issue upstream.',
+        files,
+      },
+      null,
+      2,
+    ) + '\n',
+  );
+  console.log(`wrote ${rel(LOCK_PATH)} (${Object.keys(files).length} files)`);
+} else if (!existsSync(LOCK_PATH)) {
+  warn(
+    'ai/framework-lock.json missing — framework files are unprotected (installed from a pre-lock payload?). A framework maintainer generates it with: node tools/aidlc-check.mjs --lock',
+  );
+} else {
+  let lockedEntries = {};
+  try {
+    lockedEntries = JSON.parse(readFileSync(LOCK_PATH, 'utf8')).files ?? {};
+  } catch (e) {
+    err(`cannot read ${rel(LOCK_PATH)}: ${e.message}`);
+  }
+  for (const [r, hash] of Object.entries(lockedEntries)) {
+    const p = join(REPO, r);
+    if (!existsSync(p)) {
+      // Framework tools are optional per installation (e.g. the plugin builder
+      // exists only in the framework repo); framework docs and charters are not.
+      if (!r.startsWith('tools/'))
+        err(
+          `framework file deleted: ${r} — restore it; framework content cannot be removed per-project (to drop it from the framework, open a change-request upstream)`,
+        );
+      continue;
+    }
+    if (hashFile(p) !== hash)
+      err(
+        `${r} was modified but is framework-owned — revert it. Project-specific rules belong in ai/standards/ or ai/templates/jira/; to change the framework itself, open a change-request issue upstream. Framework maintainers regenerate the lock with: node tools/aidlc-check.mjs --lock`,
+      );
+  }
+  for (const r of frameworkLockedFiles()) {
+    if (!(r in lockedEntries))
+      err(
+        `${r} is not in ai/framework-lock.json — framework-owned paths only hold files the framework ships. Project files belong in ai/standards/ or ai/templates/jira/. Framework maintainers add new framework files with: node tools/aidlc-check.mjs --lock`,
+      );
+  }
+}
+
+// ---- report ------------------------------------------------------------------
+for (const w of warnings) console.log(`warn: ${w}`);
+if (errors.length) {
+  for (const e of errors) console.error(`ERROR: ${e}`);
+  console.error(`\naidlc-check: ${errors.length} error(s)`);
+  process.exit(1);
+}
+console.log(`aidlc-check: OK (${defs.size} IDs, ${warnings.length} warnings)`);

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Not sure what you need?
+    url: https://github.com/ss-trigent/aidlc/blob/main/docs/adopting-aidlc.md
+    about: Adopting the framework in your repo? Start with the adoption guide. Already adopted? Open Claude Code in your repo and type /aidlc — describe what you want in your own words and it routes you.

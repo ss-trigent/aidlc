@@ -1,0 +1,51 @@
+name: Change request
+description: Change something already approved. Reopens Gate 1 for the affected artifacts.
+labels: ['change-request']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Approved documents are never edited directly — a change goes through this issue,
+        then a new PR the product owner reviews. Prefer talking? Open Claude Code, type
+        `/ba`, and say what changed; the BA persona files this and works out the impact.
+
+  - type: textarea
+    id: ask
+    attributes:
+      label: The ask — in the requester's own words, verbatim
+      description: Do not paraphrase or tidy this up. The original wording is the record of what was asked.
+    validations:
+      required: true
+
+  - type: input
+    id: requester
+    attributes:
+      label: Who asked
+      placeholder: name / role, and when they asked
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected
+    attributes:
+      label: Affected artifacts
+      description: Which `REQ-###` / `NFR-###` / `US-###` does this touch? Leave as "unknown" if you're not sure — the BA persona reads the blast radius from knowledge/traceability/manifest.json.
+      placeholder: |
+        REQ-002 (top-k ranking), and therefore US-002 and its 5 AC
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why now
+      description: What changed in the world — new stakeholder input, a production learning, a wrong assumption?
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **What happens next:** the product owner decides on this issue. If accepted, the BA
+        persona opens one PR updating the BRD, the affected stories, and the traceability
+        manifest together — reviewed through Gate 1 exactly like the original.

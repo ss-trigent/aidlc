@@ -1,0 +1,90 @@
+# Adopting AI-DLC in another repository
+
+This repo is the home of the AI-DLC framework: the package under [`packages/aidlc-plugin`](../packages/aidlc-plugin) ships seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager), three CI-enforced gates (Discovery → Delivery → Release), GitHub-review approvals, and a validated traceability graph. This page is the instruction set for using it in **any other repository** — a new product, an existing codebase, any stack.
+
+Ten minutes of setup, and the human doing it needs no framework knowledge: the install interview explains itself.
+
+## Prerequisites
+
+- **Claude Code** (CLI or desktop) — the personas run as plugin skills inside it
+- A **GitHub repository** — approvals are PR reviews and status derives from GitHub, so this is load-bearing, not a preference
+- **Node 20+** available in CI and locally — `aidlc-check.mjs` is a plain Node script with no dependencies
+- Branch protection requires **GitHub Pro or a public repo** if the repo is private on the Free plan (step 3 explains why it matters)
+
+## Step 1 — Install the plugin
+
+In Claude Code, from any directory:
+
+```
+/plugin marketplace add ss-trigent/aidlc
+/plugin install aidlc@trigent-aidlc
+```
+
+That's the whole install. The plugin carries the persona skills (`/aidlc`, `/ba`, `/ux`, `/architect`, `/dev`, `/qa`, `/devops`, `/manager`), the `/aidlc-init` scaffolder, and the full framework payload it scaffolds from — adopting repos never need per-repo skill files.
+
+## Step 2 — Scaffold the repo: `/aidlc-init`
+
+Open Claude Code **in the repository you're adopting into** and run:
+
+```
+/aidlc-init
+```
+
+One command, one interview. What it does, in order:
+
+1. **Refuses to overwrite** — if `ai/AI-DLC.md` already exists it offers an upgrade diff instead of a blind reinstall
+2. **Copies the framework** — `ai/` (charters, gates, templates, quality bars, interaction rules) and `tools/aidlc-check.mjs` (the CI validator)
+3. **Tailors the project-owned files to your stack.** It first detects what the repo already answers (package manager, frameworks, test runner, DB layer), then interviews you in plain language — what the product is, whatever detection couldn't settle, conventions your team already has (which win over the seed's). It then rewrites `ai/standards/*.md` for *your* stack and generates `ai/project-context.md`, which every persona reads before working. The shipped standards come from this reference project (Nx + NestJS + Angular + TypeORM) and are a seed for form, not content — the interview exists so they never land unchanged in a different stack
+4. **Seeds traceability** — `knowledge/traceability/manifest.json` plus the generated matrix view
+5. **Creates artifact homes** — `inception/` for requirements, stories and screen specs; `knowledge/decisions/` for ADRs
+6. **Wires CI** — shows you the one-line CI step to add (step 3 below)
+7. **Points agents at it** — appends the AI-DLC section to `AGENTS.md` (and `CLAUDE.md` if present) so any agent in the repo knows the rules
+
+It never commits — the scaffold lands through a reviewed PR like everything else in this framework.
+
+One rule survives every interview verbatim: the branch pattern `feat/US-###-<slug>` in `git-standards.md`. `aidlc-check` derives "story in delivery" from it, so renaming that convention would silently disable the tests-required enforcement.
+
+## Step 3 — Make the validator a required status
+
+Add to your CI workflow, after dependency install (the snippet ships in the plugin at `framework/seed/ci-step.yml`):
+
+```yaml
+- run: node tools/aidlc-check.mjs
+```
+
+Then, in the repo's branch protection rules, mark that status **required**. This is the step that turns the framework from guidance into governance: artifact IDs, bidirectional traceability, AC→test coverage, and framework-file integrity are then enforced on every PR, no matter who — or which model — drafted the work.
+
+## Step 4 — Start working
+
+```
+/aidlc          # not sure where to start — briefs you and routes you
+/ba             # first customer need → BRD + user stories
+```
+
+Or go straight to any persona: `/ux` `/architect` `/dev` `/qa` `/devops` `/manager`. Personas speak plain language, ask one question at a time, and never require the human to touch git — every decision arrives as a GitHub link plus "here's the click that approves it."
+
+## What your team owns vs. what stays framework-owned
+
+After init, the adopting team **owns and freely edits**:
+
+| Yours | Why |
+| --- | --- |
+| `ai/standards/` | Rewritten for your stack in the init interview |
+| `ai/project-context.md` | Generated from the interview — keep it true as the product evolves |
+| `ai/templates/jira/` | Encodes your team's workflow, not the framework's |
+| `knowledge/traceability/manifest.json` | Your project's traceability graph |
+| CI wiring | Your workflow files |
+
+Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
+
+## Updating
+
+Update the plugin in Claude Code (`/plugin` → update, or reinstall), then run `/aidlc-init` again in the adopting repo — it detects the existing install and walks you through the upgrade diff instead of overwriting. Your project-owned files are never touched by an upgrade.
+
+## Editors other than Claude Code — current state, honestly
+
+The persona charters are tool-agnostic, and this framework repo generates Cursor, opencode, and GitHub Copilot surfaces for them ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md), built by `tools/aidlc-build-surfaces.mjs`). Adopting repos don't get those surfaces from `/aidlc-init` yet — the builder reads `.claude/` persona sources that only exist here, while plugin installs carry the skills inside the plugin itself. If your team needs the personas in another editor, raise it as a `change-request` — the enforcement spine (GitHub approvals + `aidlc-check` as required status) already works regardless of which assistant drafts the work.
+
+## Where distribution goes next
+
+Today the plugin installs straight from this repo via the Claude Code marketplace. The agreed destination is an npm package (`npx aidlc init` / `aidlc update`) once folder-based distribution outgrows itself — the install and ownership contract above won't change, only the delivery vehicle.

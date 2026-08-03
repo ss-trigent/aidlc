@@ -1,0 +1,4 @@
+# Add this step to your CI workflow after dependency install.
+# Make it a required status via branch protection — without that,
+# the framework is guidance, not governance.
+- run: node tools/aidlc-check.mjs

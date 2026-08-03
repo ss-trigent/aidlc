@@ -1,0 +1,61 @@
+name: Bug
+description: 'Something behaves wrong. Rule from ai/gates/delivery.md — no reproduction, no bug.'
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Not sure how to fill this in? You don't have to — open Claude Code in this repo,
+        type `/qa`, and describe what you saw in plain words. The QA persona reproduces
+        it and files this for you.
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Numbered, from a clean start. If it can't be reproduced, this stays a question for the reporter rather than a bug.
+      placeholder: |
+        1. Start the API with `npm run nx -- serve api`
+        2. POST /api/routing/optimize with { origin: "HAM", destination: "SIN", weightKg: 12000 }
+        3. Observe the response
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour — cite the acceptance criterion
+      description: Which `US-###/AC-##` says it should behave differently? If no AC covers it, this may be a change request instead.
+      placeholder: 'US-002/AC-03: routes exceeding leg capacity are excluded from the ranked list'
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour — real output
+      description: Pasted output, error, or screenshot. Not a summary.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: local / CI run link / commit SHA
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Proposed severity
+      description: The human QA sets the final severity. Critical outranks in-flight stories.
+      options:
+        - critical — blocks a gate or breaks main
+        - major — a documented AC is wrong
+        - minor — wrong but with a workaround
+        - nit — cosmetic
+    validations:
+      required: true
