@@ -37,7 +37,7 @@ One command, one interview. What it does, in order:
 3. **Installs the personas into the repo, for every editor** — the persona skills and delegatable agents land in `.claude/`, and the surface builder generates the Cursor (`.cursor/`), opencode (`.opencode/`) and GitHub Copilot (`.github/`) wrappers from them. Everyone on the team runs the same persona version whatever they edit with, and cloning the repo is the whole setup for non-Claude editors
 4. **Tailors the project-owned files to your stack.** It first detects what the repo already answers (package manager, frameworks, test runner, DB layer), then interviews you in plain language — what the product is, whatever detection couldn't settle, conventions your team already has (which win over the seed's). It then rewrites `ai/standards/*.md` for *your* stack and generates `ai/project-context.md`, which every persona reads before working. The shipped standards come from this reference project (Nx + NestJS + Angular + TypeORM) and are a seed for form, not content — the interview exists so they never land unchanged in a different stack
 5. **Seeds traceability** — `knowledge/traceability/manifest.json` plus the generated matrix view
-6. **Creates artifact homes** — `inception/` for requirements, stories and screen specs; `knowledge/decisions/` for ADRs
+6. **Creates artifact homes** — `inception/` for requirements, stories and screen specs; `knowledge/decisions/` for ADRs. Two of them arrive with a README that defines the format of the deliverable that goes there: `inception/architecture/README.md` (the Architect's DB design + app architecture) and `inception/design/README.md` (screens, states, tokens, and what deliberately stays in your design tool). A root `ONBOARDING.md` lands too — a 15-minute, role-agnostic start for new joiners. All three are yours to rewrite
 7. **Wires CI** — shows you the one-line CI step to add (step 3 below)
 8. **Points agents at it** — appends the AI-DLC section to `AGENTS.md` (and `CLAUDE.md` if present) so any agent in the repo knows the rules
 
@@ -72,15 +72,41 @@ After init, the adopting team **owns and freely edits**:
 | --- | --- |
 | `ai/standards/` | Rewritten for your stack in the init interview |
 | `ai/project-context.md` | Generated from the interview — keep it true as the product evolves |
-| `ai/templates/jira/` | Encodes your team's workflow, not the framework's |
+| `ai/standards/task-surfaces.md` | The task-classification surfaces your codebase actually has — protected paths, per-domain surfaces, Medium carve-outs ([`ai/context/task-classification.md`](../ai/context/task-classification.md)) |
+| `ai/templates/jira/` | Encodes your team's workflow, not the framework's. Two validator rules: no field that forwards approval or duplicates what Jira owns, and only known `${PLACEHOLDER}`s |
 | `knowledge/traceability/manifest.json` | Your project's traceability graph |
+| `inception/architecture/README.md`, `inception/design/README.md` | Seeded formats for those deliverables — adjust them to how your team works |
+| `ONBOARDING.md` | Seeded framework-level onboarding; add the project half |
 | CI wiring | Your workflow files |
 
-Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
+Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. Note which side the templates fall on — the **artifact** templates (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `adr.md`, `pr-description.md`) are framework-owned, because their shape is what traceability is validated against; only the Jira ones are yours. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
 
-## Updating
+## Updating to a newer framework version
 
-Update the plugin in Claude Code (`/plugin` → update, or reinstall), then run `/aidlc-init` again in the adopting repo — it detects the existing install and walks you through the upgrade diff instead of overwriting. Your project-owned files are never touched by an upgrade.
+One command, from inside the adopted repo, on a fresh branch:
+
+```bash
+npx github:ss-trigent/aidlc --update
+```
+
+It refreshes every framework-owned file — `ai/` methodology, gates, templates, the `aidlc-*` tools, the pinned persona surfaces for all four editors — regenerates the Cursor/opencode/Copilot wrappers, and runs `aidlc-check` before it finishes. Then review `git diff` and land it as a PR, exactly like any other change.
+
+**What an update never touches.** Anything you own that already exists is skipped, and the run prints what it kept:
+
+| Kept as-is                               | Why                                    |
+| ---------------------------------------- | -------------------------------------- |
+| `ai/standards/`, `ai/templates/jira/`    | Seeds you tailored to your stack       |
+| `ai/project-context.md`                  | Written from your init interview       |
+| `knowledge/traceability/manifest.json`   | Your traceability data                 |
+| `.github/workflows/`                     | Your CI                                |
+
+A file you own that the framework has *added since your install* (a new standards seed, for instance) does land — it can't overwrite anything, because you don't have it yet. Tailor those in the same PR: run `/aidlc` and say "we just updated — tailor the new standards to this repo".
+
+**In Claude Code:** update the plugin first (`/plugin` → update `aidlc@trigent-aidlc`), then run `/aidlc-init` — it detects the install, runs the same `--update`, and walks you through the diff. The plugin is only the delivery vehicle; the command above is what actually changes your repo, which is why teams with no Claude Code at all update the same way.
+
+**Are we current?** The update is idempotent — run it and look at `git diff`. Empty means you're on the latest. There's no version to track by hand.
+
+**If `aidlc-check` fails after an update**, check 14 will name the file: someone edited a framework-owned file locally at some point. Revert that file — the update already wrote the correct content — and take the change upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues).
 
 ## Working from Cursor, opencode, or GitHub Copilot
 

@@ -27,10 +27,11 @@ Ask **one** question: which of these fits — or have them describe, in their ow
 ## Once you know the task
 
 1. You serve Gate 2 — Delivery (`ai/gates/delivery.md`) — read that gate doc and follow it.
-2. Run the work as an **interview** per the guided-interaction rules: one question at a time, plain words, every term explained at first use, a sensible default offered with every decision.
-3. Draft into the locations your charter defines (templates in `ai/templates/`); update `knowledge/traceability/manifest.json` when your charter says so; run `node tools/aidlc-check.mjs` before opening any PR.
-4. Present results as a **summary** (what was created, decisions made, questions open) — never raw file dumps. Offer the deep dive.
-5. End at the human's decision point: hand them the PR/issue link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
+2. **Classify before you touch anything** (`ai/context/task-classification.md`): tier the task by the riskiest surface it crosses, verify every load-bearing fact by reading the code (cite `file:line`) or by asking the human, then print the TASK CLASSIFICATION + PLANNED CHANGES block and **stop for their `go`**. A question or a read-only review skips the block — answer it. Complex tier waits on an Architect design note before code; scope creep sends you back to re-tier and re-present.
+3. Run the work as an **interview** per the guided-interaction rules: one question at a time, plain words, every term explained at first use, a sensible default offered with every decision.
+4. Draft into the locations your charter defines (templates in `ai/templates/`); update `knowledge/traceability/manifest.json` when your charter says so; run `node tools/aidlc-check.mjs` before opening any PR.
+5. Present results as a **summary** (what was created, decisions made, questions open) — never raw file dumps. Offer the deep dive.
+6. End at the human's decision point: hand them the PR/issue link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
 
 ## Never
 

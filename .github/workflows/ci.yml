@@ -17,3 +17,6 @@ jobs:
       # generated plugin-payload and persona-surface drift, framework-lock integrity.
       # Required status for merge — this is what makes the gates governance, not guidance.
       - run: node tools/aidlc-check.mjs
+      # Self-checks for the tools themselves — today: that --update refreshes the
+      # framework without overwriting anything an adopting team owns.
+      - run: npm test

@@ -98,6 +98,171 @@ files.set(
     2,
   ) + '\n',
 );
+// Artifact-home READMEs. Four places in the charters send the Architect to
+// inception/architecture/README.md and three send UX to inception/design/README.md
+// for the format of their deliverable — so the scaffold has to put them there.
+files.set(
+  join('framework', 'seed', 'architecture-README.md'),
+  `# Architecture
+
+The Architect's **Gate 1 deliverable**: the shape the whole build shares, written
+once requirements are frozen and before any code exists. Two documents:
+
+| File                 | Contains                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| \`db-design.md\`       | Entities, their relationships and cardinality, keys, the shape the data takes, and why        |
+| \`app-architecture.md\` | Services/modules, their boundaries, how they talk, where shared logic sits, and why           |
+
+## What goes in \`db-design.md\`
+
+1. **Entities** — one section each: what it represents in the business, its fields
+   with types and nullability, and which \`REQ-###\` put it there
+2. **Relationships** — cardinality and direction, stated as sentences a
+   non-engineer can check ("one shipment has many legs; a leg belongs to exactly
+   one shipment")
+3. **Keys and constraints** — primary keys, uniqueness, and the business rule each
+   one enforces. A constraint with no rule behind it is a guess
+4. **Lifecycle** — what is created, updated, soft-deleted, or never deleted, and
+   what that means for history and audit
+5. **Open questions** — anything the requirements do not settle. Do **not** invent
+   a rule; an unanswered question here is a BA question, and saying so is the job
+
+## What goes in \`app-architecture.md\`
+
+1. **Modules** — one per business capability, what each owns
+2. **Boundaries** — what may import what, and which rules are enforced in tooling
+   rather than by agreement
+3. **Flows** — the two or three paths that matter, request to persistence
+4. **Cross-cutting** — auth, validation, error shape, logging, configuration
+5. **Open questions** — same rule as above
+
+## Three rules
+
+- **It gates nothing.** Stories and screens do not wait on it; \`aidlc-check\` never
+  fails for its absence. It runs in parallel and informs the build
+- **It needs only approved requirements.** Every entity traces to a \`REQ-###\`
+- **It is a design, not a second copy of the code.** Once migrations and the
+  OpenAPI document exist, **they** are the source of truth and this becomes
+  history — not a document to keep in sync
+
+Written by the Architect persona (\`/architect\`), landed through its own reviewed
+PR. Tailor this README to your project; it is yours from here.
+`,
+);
+files.set(
+  join('framework', 'seed', 'design-README.md'),
+  `# Design
+
+What lives here, and what deliberately does not.
+
+| Here                       | Contains                                                                    |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| \`screens/SCR-###-<slug>.md\` | Screen specs: purpose, every numbered \`ST-##\` state, a11y notes             |
+| \`components/\`              | One preview per component, each rendering the states it claims               |
+| \`tokens.css\`               | The design system's single source — colors, type, spacing, radius, elevation |
+| \`tokens.json\`              | **Generated** from \`tokens.css\` by \`aidlc-check --write\` — never hand-edited |
+
+**Not here: the visual design files.** Frames stay in Figma, Penpot, or whatever
+the designer uses. The tool imports \`tokens.json\`, so the design file and this
+repo agree on the values without either owning the other. What this folder holds
+is the part a reviewer must be able to check: which screens exist, which states
+each has, and that a preview renders every one of them.
+
+## Rules \`aidlc-check\` enforces
+
+- A story with a \`## UI\` section cites a screen
+- A screen's \`ST-##\` states match its manifest entry
+- Every state is rendered and marked in a preview: \`<!-- @state SCR-###/ST-## -->\`
+- Previews hold no raw hex — colors come from tokens
+- \`tokens.json\` is generated, never edited by hand
+
+Incomplete is a warning before delivery and an error on a \`feat/US-###\` branch.
+
+## Adding a screen
+
+Run \`/ux\`. It interviews you, numbers the states so none are skipped, writes the
+spec and the preview, and updates the manifest. Consistency with what already
+exists beats a fresh idea — read the neighbouring specs and \`tokens.css\` first.
+
+Tailor this README to your project; it is yours from here.
+`,
+);
+// AI-DLC.md sends every new joiner to a root ONBOARDING.md, so the scaffold
+// writes a framework-level one. The team makes it project-specific from there.
+files.set(
+  join('framework', 'seed', 'ONBOARDING.md'),
+  `# Onboarding
+
+About 15 minutes, whatever your role. This repository runs **AI-DLC**: you work
+with an AI persona for your role, and every approval is a GitHub pull-request
+review — never chat text.
+
+## 1. The shortest possible version
+
+Work moves through three gates. Each one asks a single question, and a human
+answers it by approving a PR:
+
+| Gate            | Question                        | Who drafts                  |
+| --------------- | ------------------------------- | ---------------------------- |
+| **1 Discovery** | Are we building the right thing? | BA, UX, Architect            |
+| **2 Delivery**  | Does this story provably work?   | DEV, QA, Architect           |
+| **3 Release**   | Can we ship it safely?           | DevOps                       |
+
+Nothing is "approved" because an AI said so. Approval is your click in GitHub,
+recorded against your identity, on a branch that CI has already checked.
+
+## 2. Start your persona
+
+In your editor, type the command for your role:
+
+\`\`\`
+/aidlc        not sure? start here — it works out who you are and routes you
+/ba           requirements, stories, change requests
+/ux           screens, states, the design system
+/architect    system + DB design, ADRs, PR review
+/dev          implement one story as one PR
+/qa           tests derived from requirements, bug reports
+/devops       CI, releases, rollback
+/manager      status, routing, delivery plans
+\`\`\`
+
+Works in Claude Code, Cursor, opencode and GitHub Copilot — the personas are
+pinned in this repository, so cloning it is your whole setup.
+
+The persona interviews you in plain language. You do **not** need to know the
+framework, the file layout, or git to use it. If one starts talking in paths and
+IDs, tell it to explain in plain words — that is in its charter.
+
+## 3. What to expect the first time you build something
+
+Before writing code, the DEV persona classifies the task and shows you a plan —
+what it will change, what it verified by reading the code, and what it still
+needs to ask. It stops there until you reply \`go\`. That pause is the point: a
+wrong assumption is cheap to catch in a plan and expensive to catch in a diff.
+
+## 4. Where things live
+
+| Folder                    | What                                                       |
+| ------------------------- | ------------------------------------------------------------ |
+| \`ai/\`                     | The framework: role charters, gates, standards, templates   |
+| \`inception/product/\`      | Requirements (\`REQ-###\`)                                     |
+| \`inception/stories/\`      | Stories (\`US-###\`) and their numbered acceptance criteria    |
+| \`inception/design/\`       | Screen specs, design tokens, component previews             |
+| \`inception/architecture/\` | DB design + app architecture                                |
+| \`knowledge/\`              | Traceability manifest and architecture decisions (\`ADR-###\`) |
+
+## 5. The one rule worth memorising
+
+If something is unclear, the persona asks — it does not guess. Hold it to that.
+A confident wrong answer costs more than a question.
+
+---
+
+**This file is yours.** Replace this section with what a new joiner on *your*
+project needs: the domain in a paragraph, how to run things locally, who to ask.
+Run \`/aidlc\` and say "help me write the project part of ONBOARDING.md".
+`,
+);
 files.set(
   join('framework', 'seed', 'ci-step.yml'),
   `# Add this step to your CI workflow after dependency install.
@@ -145,8 +310,8 @@ You scaffold the AI-DLC framework from this plugin's bundled payload. The payloa
 
 ## Steps
 
-1. **Refuse-if-present check:** if \`ai/AI-DLC.md\` already exists, the framework is installed — offer an upgrade instead: diff \`$CLAUDE_PLUGIN_ROOT/framework/ai\` against \`ai/\`, walk the human through changes, and after they approve, refresh with \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs" . --force\` (their project-owned files are not in the payload, so it never touches them). Never blind-overwrite.
-2. **Run the scaffold:** \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs"\` — deterministic, no interview. It copies the framework (\`ai/\`, the validator, the Jira boundary, the surface builder), pins the persona skills and delegatable agents into \`.claude/\`, generates the Cursor (\`.cursor/\`), opencode (\`.opencode/\`) and GitHub Copilot (\`.github/\`) surfaces, seeds the traceability manifest and artifact homes, points \`AGENTS.md\` at the framework, writes an \`aidlc-check\` CI workflow if the repo has none, and verifies with \`aidlc-check\`. It aborts (rather than overwrite) on any differing existing file. Tell the human: every teammate now runs the same repo-pinned persona version whatever they edit with — Claude Code reads \`.claude/\`, Cursor \`.cursor/\`, opencode \`.opencode/\`, Copilot \`.github/\` — enforced from now on by checks 10 and 13; teammates on other editors need nothing installed, and a team with no Claude Code at all runs this same script from a clone of the framework repo. (Claude Code users may also see this plugin's own copies of the persona skills — identical content; the repo copies are canonical for this project.)
+1. **Refuse-if-present check:** if \`ai/AI-DLC.md\` already exists, the framework is installed — this is an **upgrade**, not an install. Make sure the plugin itself is current first (\`/plugin\` → update \`aidlc@trigent-aidlc\`), then run \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs" . --update\` on a fresh branch. It refreshes every framework-owned file and **skips anything the team owns that already exists** — \`ai/standards/\`, \`ai/templates/jira/\`, \`ai/project-context.md\`, the traceability manifest, their CI workflow — printing what it kept. Then walk the human through \`git diff\` (what gate rules changed, and any new seed that landed because they did not have it yet) and leave it as a PR. Never blind-overwrite, never commit.
+2. **Run the scaffold:** \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs"\` — deterministic, no interview. It copies the framework (\`ai/\`, the validator, the Jira boundary, the surface builder), pins the persona skills and delegatable agents into \`.claude/\`, generates the Cursor (\`.cursor/\`), opencode (\`.opencode/\`) and GitHub Copilot (\`.github/\`) surfaces, seeds the traceability manifest and the artifact homes (including \`inception/architecture/README.md\` and \`inception/design/README.md\`, which define the format of the Architect's and UX's deliverables, plus a root \`ONBOARDING.md\`), points \`AGENTS.md\` at the framework, writes an \`aidlc-check\` CI workflow if the repo has none, and verifies with \`aidlc-check\`. It aborts (rather than overwrite) on any differing existing file. Tell the human: every teammate now runs the same repo-pinned persona version whatever they edit with — Claude Code reads \`.claude/\`, Cursor \`.cursor/\`, opencode \`.opencode/\`, Copilot \`.github/\` — enforced from now on by checks 10 and 13; teammates on other editors need nothing installed, and a team with no Claude Code at all runs this same script from a clone of the framework repo. (Claude Code users may also see this plugin's own copies of the persona skills — identical content; the repo copies are canonical for this project.)
 3. **Tailor the project-owned files.** The payload's \`ai/standards/\` comes from the reference project (Nx + NestJS + Angular + TypeORM) — it is a seed for **form**, not content, and shipping it unchanged into a different stack would misdirect every persona. So:
    1. Detect the stack yourself before asking anything: package manager, language(s), frameworks, test runner, DB layer, monorepo tool — read \`package.json\`/lockfiles/configs; never ask what the repo already answers.
    2. Interview the human in plain language, one question at a time: what the product is (a short paragraph in their words), whatever detection could not settle, and conventions the team already has (commit style, API style, review habits). Existing conventions win over the seed's — the framework governs gates, not taste.
