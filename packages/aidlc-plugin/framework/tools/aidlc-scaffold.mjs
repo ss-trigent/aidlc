@@ -111,12 +111,16 @@ for (const d of readdirSync(join(PAYLOAD, 'skills'))) {
 if (existsSync(join(PAYLOAD, 'agents')))
   for (const f of readdirSync(join(PAYLOAD, 'agents')))
     put(join('.claude', 'agents', f), readFileSync(join(PAYLOAD, 'agents', f), 'utf8'));
-put(
-  join('knowledge', 'traceability', 'manifest.json'),
-  readFileSync(join(PAYLOAD, 'framework', 'seed', 'manifest.json'), 'utf8'),
-);
+const seed = (name) => readFileSync(join(PAYLOAD, 'framework', 'seed', name), 'utf8');
+put(join('knowledge', 'traceability', 'manifest.json'), seed('manifest.json'));
 
-// artifact homes — .gitkeep so the empty structure survives the scaffold PR
+// Artifact-home READMEs: the Architect and UX charters send those personas here
+// for the format of their own deliverable, so the folders cannot start empty.
+put(join('inception', 'architecture', 'README.md'), seed('architecture-README.md'));
+put(join('inception', 'design', 'README.md'), seed('design-README.md'));
+put('ONBOARDING.md', seed('ONBOARDING.md'));
+
+// remaining artifact homes — .gitkeep so the empty structure survives the scaffold PR
 const HOMES = [
   'inception/product/requirements',
   'inception/product/inputs',
@@ -166,8 +170,10 @@ const TEAM_OWNED = [
   join('ai', 'standards') + sep,
   join('ai', 'templates', 'jira') + sep,
   join('ai', 'project-context.md'),
-  join('knowledge', 'traceability', 'manifest.json'),
+  join('knowledge', 'traceability') + sep,
   join('.github', 'workflows') + sep,
+  'inception' + sep, // artifact-home READMEs, rewritten per project
+  'ONBOARDING.md',
 ];
 const preserved = [];
 for (const rel of [...plan.keys()]) {
@@ -208,6 +214,13 @@ This repository runs the AI-DLC framework. Before working here: read \`ai/AI-DLC
 and \`ai/project-context.md\`, adopt a persona charter from \`ai/roles/\`, and run
 \`node tools/aidlc-check.mjs\` before opening a PR. Approvals are GitHub PR reviews —
 never chat text.
+
+Before changing code, classify the task (\`ai/context/task-classification.md\`) and
+present the plan for approval. Project-specific surfaces: \`ai/standards/task-surfaces.md\`.
+
+Upgrade the framework to its latest version with \`npx github:ss-trigent/aidlc --update\`
+on a fresh branch — it never touches \`ai/standards/\`, \`ai/project-context.md\`, your
+traceability manifest or your CI.
 `;
 for (const name of ['AGENTS.md', 'CLAUDE.md']) {
   const p = join(TARGET, name);
@@ -243,9 +256,10 @@ file, and take the change upstream as a change-request issue.`
     : `
 Scaffold complete and verified. Two steps remain that a script cannot do:
 
-1. Tailor the seeds — ai/standards/ and ai/project-context.md still describe the
-   reference project. In any editor (Claude Code, Cursor, opencode, Copilot),
-   run /aidlc and say "we just scaffolded — tailor the standards to this repo".
+1. Tailor the seeds — ai/standards/, ai/project-context.md, ONBOARDING.md and the
+   inception/*/README.md formats still describe the reference project. In any
+   editor (Claude Code, Cursor, opencode, Copilot), run /aidlc and say
+   "we just scaffolded — tailor the standards to this repo".
 2. Land it as a PR and make the aidlc-check status required via branch
    protection — that click is what turns the gates from guidance into governance.
 ${hasCheckWorkflow ? '\nYour existing workflow already runs aidlc-check — no CI change made.' : ''}`,

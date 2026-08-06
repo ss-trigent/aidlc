@@ -60,6 +60,7 @@ The framework is a shared library, not a fork. A short list of files is **yours*
 | `ai/standards/*.md`                    | Coding, API, testing, security and git rules for **your** stack                 |
 | `ai/standards/task-surfaces.md`         | Your project's task-classification surfaces (see below)                          |
 | `ai/project-context.md`                | What the product is, domain terms, the stack, how to build/test/run             |
+| `inception/*/README.md`, `ONBOARDING.md` | Seeded formats and onboarding — rewrite them for your project                  |
 | `ai/templates/jira/*.md`               | Your Jira ticket shapes                                                          |
 | `knowledge/traceability/manifest.json` | Your traceability graph — personas write it; you don't hand-edit it              |
 | `.github/workflows/`                   | Your CI                                                                          |

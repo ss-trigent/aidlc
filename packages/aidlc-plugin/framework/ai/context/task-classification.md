@@ -112,6 +112,8 @@ If the file is absent, classify on the framework surfaces alone and say so in th
 
 A forced **Complex** is never silently downgraded because the human called it a quick fix. Say the surface out loud and let them decide.
 
+The no-story override is about **product** code: it exists so a feature can't skip Gate 1. A repository with no product scope — tooling, infrastructure, the framework's own repo — has no Gate 1 to pass, so there the human's request is the authority. Still tier it, still present the block; just don't route to `/ba` for a story that was never going to exist.
+
 ---
 
 ## Step 3 — Confirm the surface before locking the tier

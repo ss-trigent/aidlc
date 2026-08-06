@@ -21,11 +21,21 @@ test('--update refreshes the framework and preserves team-owned files', () => {
   execFileSync('git', ['init', '-q'], { cwd: target });
   run(target);
 
+  // the charters send personas to these, so the scaffold must create them
+  for (const f of [
+    ['inception', 'architecture', 'README.md'],
+    ['inception', 'design', 'README.md'],
+    ['ONBOARDING.md'],
+  ])
+    assert.ok(existsSync(join(target, ...f)), `${f.join('/')} was scaffolded`);
+
   // the team tailors their seeds and records real traceability data
   const standards = join(target, 'ai', 'standards', 'coding-standards.md');
   const manifest = join(target, 'knowledge', 'traceability', 'manifest.json');
+  const onboarding = join(target, 'ONBOARDING.md');
   writeFileSync(standards, '# our rules\n');
   writeFileSync(manifest, '{"ours":true}\n');
+  writeFileSync(onboarding, '# our onboarding\n');
   // ...and someone drifts a framework file, which the update must put back
   const gate = join(target, 'ai', 'gates', 'delivery.md');
   const gateBefore = readFileSync(gate, 'utf8');
@@ -38,6 +48,7 @@ test('--update refreshes the framework and preserves team-owned files', () => {
 
   assert.equal(readFileSync(standards, 'utf8'), '# our rules\n', 'tailored standards survived');
   assert.equal(readFileSync(manifest, 'utf8'), '{"ours":true}\n', 'traceability data survived');
+  assert.equal(readFileSync(onboarding, 'utf8'), '# our onboarding\n', 'onboarding survived');
   assert.equal(readFileSync(gate, 'utf8'), gateBefore, 'framework file was refreshed');
 });
 
