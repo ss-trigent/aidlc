@@ -72,11 +72,12 @@ After init, the adopting team **owns and freely edits**:
 | --- | --- |
 | `ai/standards/` | Rewritten for your stack in the init interview |
 | `ai/project-context.md` | Generated from the interview — keep it true as the product evolves |
-| `ai/templates/jira/` | Encodes your team's workflow, not the framework's |
+| `ai/standards/task-surfaces.md` | The task-classification surfaces your codebase actually has — protected paths, per-domain surfaces, Medium carve-outs ([`ai/context/task-classification.md`](../ai/context/task-classification.md)) |
+| `ai/templates/jira/` | Encodes your team's workflow, not the framework's. Two validator rules: no field that forwards approval or duplicates what Jira owns, and only known `${PLACEHOLDER}`s |
 | `knowledge/traceability/manifest.json` | Your project's traceability graph |
 | CI wiring | Your workflow files |
 
-Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
+Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. Note which side the templates fall on — the **artifact** templates (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `adr.md`, `pr-description.md`) are framework-owned, because their shape is what traceability is validated against; only the Jira ones are yours. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
 
 ## Updating to a newer framework version
 

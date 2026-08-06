@@ -51,6 +51,48 @@ npx github:ss-trigent/aidlc --update
 
 Refreshes every framework-owned file and the pinned persona surfaces, then verifies with `aidlc-check`. Files you own are skipped when they already exist — your tailored `ai/standards/`, `ai/project-context.md`, the traceability manifest, your CI — and the run prints what it kept. Review `git diff` and land it as a PR. It's idempotent, so an empty diff means you're already current; there's no version to track by hand. Claude Code users can update the plugin (`/plugin`) and run `/aidlc-init`, which drives the same command. Details: [docs/adopting-aidlc.md](docs/adopting-aidlc.md#updating-to-a-newer-framework-version).
 
+## Configuring it for your team
+
+The framework is a shared library, not a fork. A short list of files is **yours** — the init interview writes them for your stack and you edit them freely from then on. Everything else is hash-locked, so every adopting team stays on the same gates.
+
+| Yours to edit                          | What you put there                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| `ai/standards/*.md`                    | Coding, API, testing, security and git rules for **your** stack                 |
+| `ai/standards/task-surfaces.md`         | Your project's task-classification surfaces (see below)                          |
+| `ai/project-context.md`                | What the product is, domain terms, the stack, how to build/test/run             |
+| `ai/templates/jira/*.md`               | Your Jira ticket shapes                                                          |
+| `knowledge/traceability/manifest.json` | Your traceability graph — personas write it; you don't hand-edit it              |
+| `.github/workflows/`                   | Your CI                                                                          |
+
+Everything else under `ai/` and every `tools/aidlc-*.mjs` is **framework-owned**: `ai/framework-lock.json` carries a SHA-256 per file and `aidlc-check` (check 14) fails the build on any local edit until it's reverted. An update refreshes all of them and never touches the table above.
+
+### Extending task classification
+
+Before writing code, a delivery persona tiers the task Simple / Medium / Complex by the riskiest surface it crosses ([`ai/context/task-classification.md`](ai/context/task-classification.md)). The five surfaces — contract, persistence, trust, dependency, operational — are framework-owned so the workflow reads the same in every repo. What they're *called in your codebase* is yours:
+
+```
+ai/standards/task-surfaces.md     ← name your protected paths, per-domain
+                                     surfaces (backend / UI / scripts & jobs),
+                                     and your Medium carve-outs
+```
+
+You may **add** surfaces and named carve-outs; you may not remove or demote a framework one. That isn't a promise — the framework list is locked, so it can only be extended. If a framework surface is genuinely wrong for you, that's a `change-request` upstream.
+
+### Configuring templates
+
+Two kinds, and only one is yours:
+
+- **Jira templates** (`ai/templates/jira/`) — **yours.** Frontmatter fields plus a Markdown body, `${PLACEHOLDER}` syntax. Two validator rules (check 12): a template may not declare a field that forwards approval or duplicates what Jira owns (`status`, `approval`, `approver`, `signoff`, `sprint`, `assignee`, `storypoints`, `duedate`, …), and every `${PLACEHOLDER}` must be one the tooling knows. Approval lives in a GitHub review; Jira mirrors the work, it never gates it.
+- **Artifact templates** (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `adr.md`, `pr-description.md`) — **framework-owned.** Their shape is what `aidlc-check` validates traceability against, so a local edit breaks the guarantee for everyone. Need a different shape? `change-request` upstream.
+
+### Optional integrations
+
+All off by default, all configured in your own files — nothing to install into the framework: Jira mirroring ([`ai/context/jira-sync.md`](ai/context/jira-sync.md) is binding; `tools/aidlc-jira.mjs` is the only permitted writer), any design tool via the generated `inception/design/tokens.json`, MCP servers for **read-only** context, and [mattpocock/skills](https://github.com/mattpocock/skills) as companion techniques personas may invoke while staying bound by their charters. The full adopted/declined list with rationale: [`ai/integrations.md`](ai/integrations.md).
+
+### When you need to change something locked
+
+Open a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo. Wanting a different gate rule is legitimate; editing it locally just makes your next update a merge conflict and splits the framework into per-team forks. Ownership in full: [docs/adopting-aidlc.md](docs/adopting-aidlc.md#what-your-team-owns-vs-what-stays-framework-owned).
+
 ## What's in this repo
 
 | Path                                  | What                                                                | Status                                                 |
