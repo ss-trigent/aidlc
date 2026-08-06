@@ -78,9 +78,32 @@ After init, the adopting team **owns and freely edits**:
 
 Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
 
-## Updating
+## Updating to a newer framework version
 
-Update the plugin in Claude Code (`/plugin` → update, or reinstall), then run `/aidlc-init` again in the adopting repo — it detects the existing install and walks you through the upgrade diff instead of overwriting. Your project-owned files are never touched by an upgrade.
+One command, from inside the adopted repo, on a fresh branch:
+
+```bash
+npx github:ss-trigent/aidlc --update
+```
+
+It refreshes every framework-owned file — `ai/` methodology, gates, templates, the `aidlc-*` tools, the pinned persona surfaces for all four editors — regenerates the Cursor/opencode/Copilot wrappers, and runs `aidlc-check` before it finishes. Then review `git diff` and land it as a PR, exactly like any other change.
+
+**What an update never touches.** Anything you own that already exists is skipped, and the run prints what it kept:
+
+| Kept as-is                               | Why                                    |
+| ---------------------------------------- | -------------------------------------- |
+| `ai/standards/`, `ai/templates/jira/`    | Seeds you tailored to your stack       |
+| `ai/project-context.md`                  | Written from your init interview       |
+| `knowledge/traceability/manifest.json`   | Your traceability data                 |
+| `.github/workflows/`                     | Your CI                                |
+
+A file you own that the framework has *added since your install* (a new standards seed, for instance) does land — it can't overwrite anything, because you don't have it yet. Tailor those in the same PR: run `/aidlc` and say "we just updated — tailor the new standards to this repo".
+
+**In Claude Code:** update the plugin first (`/plugin` → update `aidlc@trigent-aidlc`), then run `/aidlc-init` — it detects the install, runs the same `--update`, and walks you through the diff. The plugin is only the delivery vehicle; the command above is what actually changes your repo, which is why teams with no Claude Code at all update the same way.
+
+**Are we current?** The update is idempotent — run it and look at `git diff`. Empty means you're on the latest. There's no version to track by hand.
+
+**If `aidlc-check` fails after an update**, check 14 will name the file: someone edited a framework-owned file locally at some point. Revert that file — the update already wrote the correct content — and take the change upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues).
 
 ## Working from Cursor, opencode, or GitHub Copilot
 

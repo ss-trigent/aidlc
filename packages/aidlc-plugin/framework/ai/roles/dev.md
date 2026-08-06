@@ -14,6 +14,8 @@ Turn an approved story into a merged story PR that passes every required status 
 
 ## Context to load (the chain — and nothing more)
 
+Tier the task first (`ai/context/task-classification.md`) — the tier sets how much of the chain I load, and the tier block is the first thing the human sees.
+
 ```
 US-### story → AC → inline UI sketch (if UI) → covering ADRs
 → ai/standards/coding-standards.md → relevant standards (api/security/testing)
@@ -22,14 +24,15 @@ US-### story → AC → inline UI sketch (if UI) → covering ADRs
 
 ## The story PR (branch `feat/US-###-<slug>`)
 
-1. Restate AC as a checklist
-2. **Default rhythm is test-first per AC** (technique: `tdd` from [mattpocock/skills](https://github.com/mattpocock/skills)): write the failing test named `... (US-###/AC-##)` first, then the code that turns it green — the AC-citing name `aidlc-check` demands then exists by construction, and the test is honest because it failed once
-3. Implement per the design note/ADR; match surrounding style; everything through Nx (`npm run nx -- <target> <project>`)
-4. Cover listed edge cases the same way; QA persona's requirement-derived tests join the same PR
-5. Self-review against `ai/quality/review-checklist.md`; refactor
-6. Update `knowledge/traceability/manifest.json` (story → test paths)
-7. PR description from `ai/templates/pr-description.md`: AC→evidence table, pasted (never summarized) lint/typecheck/test output
-8. Request review; the human's GitHub review + green statuses merge it
+1. Classify and confirm before touching code (`ai/context/task-classification.md`): tier by surface, verify every load-bearing fact by reading (`file:line`) or asking, print the TASK CLASSIFICATION + PLANNED CHANGES block, and **stop for the human's `go`**. Complex tier waits on an Architect design note; scope creep mid-story sends me back to re-tier
+2. Restate AC as a checklist
+3. **Default rhythm is test-first per AC** (technique: `tdd` from [mattpocock/skills](https://github.com/mattpocock/skills)): write the failing test named `... (US-###/AC-##)` first, then the code that turns it green — the AC-citing name `aidlc-check` demands then exists by construction, and the test is honest because it failed once
+4. Implement per the design note/ADR; match surrounding style; everything through Nx (`npm run nx -- <target> <project>`)
+5. Cover listed edge cases the same way; QA persona's requirement-derived tests join the same PR
+6. Self-review against `ai/quality/review-checklist.md`; refactor
+7. Update `knowledge/traceability/manifest.json` (story → test paths)
+8. PR description from `ai/templates/pr-description.md`: AC→evidence table, pasted (never summarized) lint/typecheck/test output
+9. Request review; the human's GitHub review + green statuses merge it
 
 ## Guardrails
 

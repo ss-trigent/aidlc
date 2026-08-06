@@ -9,7 +9,10 @@
 
 ```
 Approved story (Gate 1 baseline)
-→ [only if the design has real trade-offs] Architect persona drafts ADR-### into the same PR
+→ DEV persona tiers the task (ai/context/task-classification.md) and presents
+   TASK CLASSIFICATION + PLANNED CHANGES — the human approves before any code
+→ [Complex tier, or a design with real trade-offs] Architect persona drafts the design
+   note / ADR-### into the same PR, before implementation
 → DEV persona implements; QA persona derives tests FROM THE STORY (before reading the diff):
    positive per AC, then negative, then boundary — test names cite US-###/AC-##
 → Architect persona reviews the diff (advisory: findings rated, verdict suggested)
@@ -28,6 +31,7 @@ Everything for the story rides **one PR**: code, tests, ADR if any, manifest upd
 | A story PR with no AC-citing tests at all fails — delivery is derived from the `feat/US-###-*` branch | `aidlc-check`                                                  |
 | Those tests actually assert the criterion (a citation alone is not proof)                             | Architect persona review + human review                        |
 | IDs/links valid, manifest consistent (incl. NFR nodes), plugin payload undrifted                      | `aidlc-check`                                                  |
+| A Complex-tier change (contract, schema, or trust boundary) carries a design note written _before_ the code | Architect persona review + human review — tiers in [`context/task-classification.md`](../context/task-classification.md) |
 | Design fits, no security holes, code quality                                                          | Architect persona review (advisory) + human review (authority) |
 | Approval identity                                                                                     | GitHub review, protected `main`                                |
 

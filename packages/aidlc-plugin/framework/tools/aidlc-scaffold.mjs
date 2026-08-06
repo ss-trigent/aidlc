@@ -4,9 +4,12 @@
 //
 //   node tools/aidlc-scaffold.mjs [target-dir]     scaffold into target (default: cwd)
 //   npx github:ss-trigent/aidlc                    same, from inside the target repo
+//   npx github:ss-trigent/aidlc --update           upgrade an installed repo to this version
 //
 //   --payload <dir>   explicit plugin-payload root (contains framework/, skills/, agents/)
 //   --force           overwrite existing files that differ (default: abort and list them)
+//   --update          refresh an existing install: framework files are rewritten,
+//                     team-owned files (TEAM_OWNED below) are left exactly as they are
 //
 // What it does NOT do: the tailoring interview (ai/standards/ and
 // ai/project-context.md stay reference seeds until an AI persona rewrites them
@@ -20,12 +23,13 @@ import {
   mkdirSync,
   appendFileSync,
 } from 'node:fs';
-import { join, resolve, dirname, relative, basename } from 'node:path';
+import { join, resolve, dirname, relative, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
-const force = args.includes('--force');
+const update = args.includes('--update');
+const force = args.includes('--force') || update;
 const payloadFlag = args.indexOf('--payload');
 const positional = args.filter(
   (a, i) => !a.startsWith('--') && (payloadFlag === -1 || i !== payloadFlag + 1),
@@ -61,11 +65,20 @@ if (!existsSync(TARGET) || !statSync(TARGET).isDirectory()) {
   console.error(`target is not a directory: ${TARGET}`);
   process.exit(1);
 }
-if (existsSync(join(TARGET, 'ai', 'AI-DLC.md'))) {
+const installed = existsSync(join(TARGET, 'ai', 'AI-DLC.md'));
+if (installed && !update) {
   console.error(
     `AI-DLC is already installed in ${TARGET} (ai/AI-DLC.md exists).\n` +
-      'Upgrades are guided, not blind-overwritten: run /aidlc-init in Claude Code, ' +
-      'or diff this payload against ai/ and review the changes as a PR.',
+      'To upgrade it to this version, rerun with --update — framework files are refreshed, ' +
+      'your standards, project context, traceability manifest and CI workflow are left alone.\n' +
+      'Review the result as a PR before merging.',
+  );
+  process.exit(1);
+}
+if (update && !installed) {
+  console.error(
+    `--update needs an existing install in ${TARGET} (no ai/AI-DLC.md found). ` +
+      'Drop the flag to scaffold from scratch.',
   );
   process.exit(1);
 }
@@ -143,6 +156,28 @@ jobs:
 `,
   );
 
+// ---- never rewrite what the team owns ---------------------------------------
+// These ship in the payload so a fresh install gets a seed, but once they exist
+// they hold the team's own work: the standards and project context they tailored
+// (both excluded from ai/framework-lock.json), their traceability data, and their
+// CI. An upgrade that reset any of them would lose real work, so existing copies
+// win over the payload — in every mode, --force and --update included.
+const TEAM_OWNED = [
+  join('ai', 'standards') + sep,
+  join('ai', 'templates', 'jira') + sep,
+  join('ai', 'project-context.md'),
+  join('knowledge', 'traceability', 'manifest.json'),
+  join('.github', 'workflows') + sep,
+];
+const preserved = [];
+for (const rel of [...plan.keys()]) {
+  if (!existsSync(join(TARGET, rel))) continue;
+  if (rel.endsWith('.gitkeep') || TEAM_OWNED.some((p) => rel === p || rel.startsWith(p))) {
+    plan.delete(rel);
+    preserved.push(rel);
+  }
+}
+
 const collisions = [];
 for (const [rel, content] of plan) {
   const p = join(TARGET, rel);
@@ -161,7 +196,9 @@ for (const [rel, content] of plan) {
   mkdirSync(dirname(p), { recursive: true });
   writeFileSync(p, content);
 }
-console.log(`scaffolded ${plan.size} files into ${TARGET}`);
+console.log(`${update ? 'updated' : 'scaffolded'} ${plan.size} files in ${TARGET}`);
+if (preserved.length)
+  console.log(`kept ${preserved.length} team-owned file(s) untouched: ${preserved.join(', ')}`);
 
 // ---- point agents at it -------------------------------------------------------
 const AGENTS_SECTION = `
@@ -190,7 +227,20 @@ run('aidlc-build-surfaces.mjs');
 run('aidlc-check.mjs', '--write');
 run('aidlc-check.mjs');
 
-console.log(`
+console.log(
+  update
+    ? `
+Update complete and verified. Review it as a PR before merging — \`git diff\` shows
+exactly what the framework changed. Two things worth a read in that diff:
+
+1. New or changed gate rules under ai/ — the personas follow them from now on.
+2. New project-owned seeds (ai/standards/) that landed because you did not have
+   them yet. Tailor those to this repo: run /aidlc in any editor and say
+   "we just updated — tailor the new standards to this repo".
+
+If aidlc-check fails on a framework file, someone edited it locally: revert that
+file, and take the change upstream as a change-request issue.`
+    : `
 Scaffold complete and verified. Two steps remain that a script cannot do:
 
 1. Tailor the seeds — ai/standards/ and ai/project-context.md still describe the
@@ -198,4 +248,5 @@ Scaffold complete and verified. Two steps remain that a script cannot do:
    run /aidlc and say "we just scaffolded — tailor the standards to this repo".
 2. Land it as a PR and make the aidlc-check status required via branch
    protection — that click is what turns the gates from guidance into governance.
-${hasCheckWorkflow ? '\nYour existing workflow already runs aidlc-check — no CI change made.' : ''}`);
+${hasCheckWorkflow ? '\nYour existing workflow already runs aidlc-check — no CI change made.' : ''}`,
+);

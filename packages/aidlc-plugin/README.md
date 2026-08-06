@@ -25,6 +25,16 @@ The scaffold pins the personas into the repo for **every editor** — Claude Cod
 
 No Claude Code on the team? The scaffold `/aidlc-init` drives is a plain Node script (`framework/tools/aidlc-scaffold.mjs`) — run `npx github:ss-trigent/aidlc` from inside the target repo for the identical result, then tailor the standards via `/aidlc` in any editor.
 
+## Update
+
+Update the plugin (`/plugin` → update `aidlc@trigent-aidlc`), then run `/aidlc-init` in the adopted repo — it detects the install and upgrades instead of scaffolding. Without Claude Code, the same upgrade is one command from inside that repo:
+
+```bash
+npx github:ss-trigent/aidlc --update
+```
+
+Framework files and all four persona surfaces are refreshed; files the team owns — tailored `ai/standards/`, `ai/project-context.md`, `ai/templates/jira/`, the traceability manifest, their CI workflow — are skipped when they already exist, and the run prints what it kept. It verifies with `aidlc-check` and leaves the result for review as a PR. Idempotent: an empty `git diff` means already current.
+
 Full adoption walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades: [`docs/adopting-aidlc.md`](../../docs/adopting-aidlc.md).
 
 Optional companion: [mattpocock/skills](https://github.com/mattpocock/skills) — personas can invoke its techniques (`grilling`, `tdd`, `domain-modeling`, `triage`, ...) as sub-skills while staying bound by their charters and gates. See the mapping table in `framework/ai/AI-DLC.md` §Companion skills.

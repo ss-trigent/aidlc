@@ -41,6 +41,16 @@ npx github:ss-trigent/aidlc
 
 (or clone this repo and run `node aidlc/tools/aidlc-scaffold.mjs /path/to/your-repo`). It installs the framework, pins the personas for every editor, seeds the traceability manifest and artifact homes, points `AGENTS.md` at the framework, writes the `aidlc-check` CI workflow if the repo has none, and verifies — identical output to the plugin flow, refusing to overwrite anything that differs. One step stays conversational: `ai/standards/` and `ai/project-context.md` are still reference seeds afterwards, so open your editor, run `/aidlc`, and say "we just scaffolded — tailor the standards to this repo".
 
+### Updating to a newer version
+
+From inside the adopted repo, on a fresh branch:
+
+```bash
+npx github:ss-trigent/aidlc --update
+```
+
+Refreshes every framework-owned file and the pinned persona surfaces, then verifies with `aidlc-check`. Files you own are skipped when they already exist — your tailored `ai/standards/`, `ai/project-context.md`, the traceability manifest, your CI — and the run prints what it kept. Review `git diff` and land it as a PR. It's idempotent, so an empty diff means you're already current; there's no version to track by hand. Claude Code users can update the plugin (`/plugin`) and run `/aidlc-init`, which drives the same command. Details: [docs/adopting-aidlc.md](docs/adopting-aidlc.md#updating-to-a-newer-framework-version).
+
 ## What's in this repo
 
 | Path                                  | What                                                                | Status                                                 |

@@ -4,11 +4,20 @@
 
 ## The rule
 
+0. Tier the task first ([`task-classification.md`](task-classification.md)) — the tier sets the budget below
 1. Start from the task's artifact (a story, a BRD section, a PR, an issue)
 2. Follow its ID links one hop upstream (story → its REQs) and to its gate's listed inputs
 3. Load your charter (`ai/roles/`) + the gate doc (`ai/gates/`)
 4. Load only the standards your task touches (coding for implementation, testing for tests, ...)
 5. Load code only for the modules under change
+
+## Budget per tier
+
+| Tier        | Budget       | Load                                                                                             |
+| ----------- | ------------ | ------------------------------------------------------------------------------------------------ |
+| **Simple**  | **Minimal**  | The one artifact or file asked about. Nothing else — no charter chain, no standards               |
+| **Medium**  | **Standard** | Charter + gate doc + the story and its AC + the standards the change touches + modules under change |
+| **Complex** | **Full**     | Standard, plus the covering ADRs, the architecture deliverable, and the contract/schema the change crosses |
 
 ## Example — implementing a story
 
