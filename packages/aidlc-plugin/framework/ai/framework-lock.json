@@ -26,10 +26,10 @@
     "ai/templates/pr-description.md": "6e9b3159b11b0d106907b1a41d71e96a337247816ba1e5b571c40eb8fcd69e5f",
     "ai/templates/screen-spec.md": "2de4ffe9cd92600149328f3854bd530098af11d7c6a1cdae011a292dbd6cec51",
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
-    "tools/aidlc-build-plugin.mjs": "3b780c0fb775d5c0040b89d500e36923e87f83f519082be8ddd5ebda67843e36",
-    "tools/aidlc-build-surfaces.mjs": "abf119d62366cc564a52d5fd5db146b65faf3a7bf09feea5ad69c0957df90c0f",
-    "tools/aidlc-check.mjs": "dba55a963c6fc9c3d03d96a9762de3978322d5b9dff5c6b34c30d012b2fe91a2",
-    "tools/aidlc-jira.mjs": "6e87c26c4732c0fca02d90d5b8b32569f3e326a38f19ab45812245d25f115744",
-    "tools/aidlc-scaffold.mjs": "dc4914fc206deb3341178ca9af12347bec1616b285c49d40b524dfc3ec0b9370"
+    "tools/aidlc-build-plugin.mjs": "e94634b33831cd26a260851bdbf9c3aa8550c80fb1eb08623931b7fd2446fb06",
+    "tools/aidlc-build-surfaces.mjs": "6c3f630f47671be517e207899e46e0f2833f0cf24f235981006a3804e692608b",
+    "tools/aidlc-check.mjs": "7033f374ff27b78f5f264f0884769ea4dfa1164ca2602dc106888bc300383821",
+    "tools/aidlc-jira.mjs": "18e35990b478be478412e59a8d9e77fda37a356bfb86ff9c2a113b93c8a99215",
+    "tools/aidlc-scaffold.mjs": "f1e6586a6f38efeb1b81a4af9f401198e5bb88e7c67c9aa36f2f34d7ab3ccb62"
   }
 }

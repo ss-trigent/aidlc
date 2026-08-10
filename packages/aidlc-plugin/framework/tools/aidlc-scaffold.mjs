@@ -27,6 +27,11 @@ import { join, resolve, dirname, relative, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
+// CRLF-normalized reads: Windows autocrlf checkouts must parse and compare like LF ones
+function read(p) {
+  return readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+}
+
 const args = process.argv.slice(2);
 const update = args.includes('--update');
 const force = args.includes('--force') || update;
@@ -49,7 +54,7 @@ const REPO_URL = 'https://github.com/ss-trigent/aidlc.git';
 if (!process.env.AIDLC_NO_FRESH) {
   try {
     const lock = JSON.parse(
-      readFileSync(join(HERE, '..', '..', '.package-lock.json'), 'utf8'),
+      read(join(HERE, '..', '..', '.package-lock.json')),
     );
     const cachedSha = (lock.packages?.['node_modules/aidlc']?.resolved ?? '').match(
       /^git\+.*#([0-9a-f]{40})$/,
@@ -146,13 +151,13 @@ function walk(dir, acc = []) {
 const plan = new Map(); // target-relative path -> content
 const put = (rel, content) => plan.set(rel, content);
 const copyTree = (srcDir, destRel) => {
-  for (const f of walk(srcDir)) put(join(destRel, relative(srcDir, f)), readFileSync(f, 'utf8'));
+  for (const f of walk(srcDir)) put(join(destRel, relative(srcDir, f)), read(f));
 };
 
 copyTree(join(PAYLOAD, 'framework', 'ai'), 'ai');
 for (const f of readdirSync(join(PAYLOAD, 'framework', 'tools'))) {
   if (f.endsWith('.mjs'))
-    put(join('tools', f), readFileSync(join(PAYLOAD, 'framework', 'tools', f), 'utf8'));
+    put(join('tools', f), read(join(PAYLOAD, 'framework', 'tools', f)));
 }
 for (const d of readdirSync(join(PAYLOAD, 'skills'))) {
   if (d === 'aidlc-init') continue; // scaffolder is plugin-only; this script replaces it here
@@ -160,8 +165,8 @@ for (const d of readdirSync(join(PAYLOAD, 'skills'))) {
 }
 if (existsSync(join(PAYLOAD, 'agents')))
   for (const f of readdirSync(join(PAYLOAD, 'agents')))
-    put(join('.claude', 'agents', f), readFileSync(join(PAYLOAD, 'agents', f), 'utf8'));
-const seed = (name) => readFileSync(join(PAYLOAD, 'framework', 'seed', name), 'utf8');
+    put(join('.claude', 'agents', f), read(join(PAYLOAD, 'agents', f)));
+const seed = (name) => read(join(PAYLOAD, 'framework', 'seed', name));
 put(join('knowledge', 'traceability', 'manifest.json'), seed('manifest.json'));
 
 // Artifact-home READMEs: the Architect and UX charters send those personas here
@@ -187,7 +192,7 @@ for (const h of HOMES) put(join(h, '.gitkeep'), '');
 const wfDir = join(TARGET, '.github', 'workflows');
 const hasCheckWorkflow =
   existsSync(wfDir) &&
-  readdirSync(wfDir).some((f) => readFileSync(join(wfDir, f), 'utf8').includes('aidlc-check.mjs'));
+  readdirSync(wfDir).some((f) => read(join(wfDir, f)).includes('aidlc-check.mjs'));
 if (!hasCheckWorkflow)
   put(
     join('.github', 'workflows', 'aidlc-check.yml'),
@@ -237,7 +242,7 @@ for (const rel of [...plan.keys()]) {
 const collisions = [];
 for (const [rel, content] of plan) {
   const p = join(TARGET, rel);
-  if (existsSync(p) && readFileSync(p, 'utf8') !== content) collisions.push(rel);
+  if (existsSync(p) && read(p) !== content) collisions.push(rel);
 }
 if (collisions.length && !force) {
   console.error(
@@ -275,7 +280,7 @@ traceability manifest or your CI.
 for (const name of ['AGENTS.md', 'CLAUDE.md']) {
   const p = join(TARGET, name);
   if (name === 'CLAUDE.md' && !existsSync(p)) continue; // only annotate an existing CLAUDE.md
-  if (existsSync(p) && readFileSync(p, 'utf8').includes('ai/AI-DLC.md')) continue;
+  if (existsSync(p) && read(p).includes('ai/AI-DLC.md')) continue;
   appendFileSync(p, (existsSync(p) ? '\n' : `# ${basename(TARGET)}\n`) + AGENTS_SECTION);
   console.log(`pointed ${name} at the framework`);
 }
