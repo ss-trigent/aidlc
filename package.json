@@ -11,7 +11,7 @@
   },
   "scripts": {
     "check": "node tools/aidlc-check.mjs",
-    "test": "node --test tools/*.test.mjs",
+    "test": "node --test \"tools/*.test.mjs\"",
     "build:plugin": "node tools/aidlc-build-plugin.mjs",
     "build:surfaces": "node tools/aidlc-build-surfaces.mjs"
   }

@@ -51,10 +51,15 @@ import {
   existsSync,
   writeFileSync,
 } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+
+// CRLF-normalized reads: Windows autocrlf checkouts must parse and compare like LF ones
+function read(p) {
+  return readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+}
 
 const REPO = process.cwd();
 const errors = [];
@@ -73,7 +78,9 @@ function walk(dir, pred, acc = []) {
   }
   return acc;
 }
-const rel = (p) => relative(REPO, p);
+// Always forward slashes: lock keys, manifest paths, and PROJECT_OWNED prefixes
+// are written with '/', and path.relative returns '\' on Windows.
+const rel = (p) => relative(REPO, p).split(sep).join('/');
 
 // An AC counts as proven only when cited in the title of an active `it(`/`test(`
 // (`.each` allowed) — a citation in a comment or a skipped test is not proof.
@@ -119,7 +126,7 @@ const define = (id, file) => defs.set(id, [...(defs.get(id) ?? []), file]);
 for (const f of walk(join(REPO, 'inception', 'product'), (p) =>
   p.endsWith('.md'),
 )) {
-  const text = readFileSync(f, 'utf8');
+  const text = read(f);
   for (const line of text.split('\n')) {
     const m = line.match(/^\|\s*((?:REQ|NFR|RISK)-\d{3})\s*\|/);
     if (m) define(m[1], rel(f));
@@ -134,7 +141,7 @@ const storyHasUi = new Set(); // stories carrying a "## UI" section
 for (const f of storyFiles) {
   const us = rel(f).match(/US-\d{3}/)[0];
   define(us, rel(f));
-  const text = readFileSync(f, 'utf8');
+  const text = read(f);
   const acs = new Set(
     [...text.matchAll(/^###\s+(AC-\d{2})\b/gm)].map((m) => m[1]),
   );
@@ -158,7 +165,7 @@ for (const f of screenFiles) {
   const scr = rel(f).match(/SCR-\d{3}/)[0];
   define(scr, rel(f));
   const states = new Set(
-    [...readFileSync(f, 'utf8').matchAll(/^###\s+(ST-\d{2})\b/gm)].map(
+    [...read(f).matchAll(/^###\s+(ST-\d{2})\b/gm)].map(
       (m) => m[1],
     ),
   );
@@ -174,7 +181,7 @@ for (const [id, files] of defs) {
 const manifestPath = join(REPO, 'knowledge', 'traceability', 'manifest.json');
 let manifest;
 try {
-  manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  manifest = JSON.parse(read(manifestPath));
 } catch (e) {
   err(`cannot read ${rel(manifestPath)}: ${e.message}`);
 }
@@ -262,7 +269,7 @@ if (manifest) {
             err(`${us}: listed test file missing: ${t}`);
             return '';
           }
-          const text = readFileSync(join(REPO, t), 'utf8');
+          const text = read(join(REPO, t));
           if (SKIPPED_TEST.test(text))
             err(
               `${us}: ${t} contains skipped tests (it.skip/xit/describe.skip) — skipped tests cannot serve as AC proof (testing-standards: a red test is never skipped)`,
@@ -362,7 +369,7 @@ if (manifest) {
         );
         continue;
       }
-      const html = readFileSync(p, 'utf8');
+      const html = read(p);
       if (!/^\s*<!--\s*@dsCard\b/.test(html))
         err(
           `inception/design/components/${c}/preview.html must open with its card marker <!-- @dsCard group="…" --> (inception/design/README.md)`,
@@ -451,7 +458,7 @@ if (manifest) {
   ];
   for (const spec of specs) {
     const cited = new Set(
-      [...readFileSync(spec, 'utf8').matchAll(/US-\d{3}/g)].map((m) => m[0]),
+      [...read(spec).matchAll(/US-\d{3}/g)].map((m) => m[0]),
     );
     for (const us of cited) {
       if (!stories[us])
@@ -476,7 +483,7 @@ if (manifest) {
     console.log(`wrote ${rel(matrixPath)}`);
   } else if (
     !existsSync(matrixPath) ||
-    readFileSync(matrixPath, 'utf8') !== view
+    read(matrixPath) !== view
   ) {
     err(
       `traceability-matrix.md is stale or hand-edited — run: node tools/aidlc-check.mjs --write`,
@@ -545,13 +552,13 @@ function generateTokens(css) {
 const tokensCss = join(REPO, 'inception', 'design', 'tokens.css');
 if (existsSync(tokensCss)) {
   const tokensJson = join(REPO, 'inception', 'design', 'tokens.json');
-  const generated = generateTokens(readFileSync(tokensCss, 'utf8'));
+  const generated = generateTokens(read(tokensCss));
   if (process.argv.includes('--write')) {
     writeFileSync(tokensJson, generated);
     console.log(`wrote ${rel(tokensJson)}`);
   } else if (
     !existsSync(tokensJson) ||
-    readFileSync(tokensJson, 'utf8') !== generated
+    read(tokensJson) !== generated
   ) {
     err(
       `inception/design/tokens.json is stale or hand-edited — it is generated from tokens.css so the designer's import cannot drift from what ships. Run: node tools/aidlc-check.mjs --write`,
@@ -577,7 +584,7 @@ function generateMatrix(reqs, stories) {
       }
       const contents = s.tests
         .filter((t) => existsSync(join(REPO, t)))
-        .map((t) => readFileSync(join(REPO, t), 'utf8'))
+        .map((t) => read(join(REPO, t)))
         .join('\n');
       proven += s.acs.filter((ac) => citesAc(contents, us, ac)).length;
     }
@@ -610,7 +617,7 @@ const targets = [
 ];
 for (const [name, file, get] of targets) {
   try {
-    if (!get(JSON.parse(readFileSync(join(REPO, file), 'utf8'))))
+    if (!get(JSON.parse(read(join(REPO, file)))))
       err(
         `project "${name}" has no test target (${file}) — untestable product code`,
       );
@@ -646,7 +653,7 @@ for (const p of PERSONAS) {
     err(`persona "${p}" has no agent at .claude/agents/aidlc-${p}.md`);
     continue;
   }
-  const text = readFileSync(agent, 'utf8');
+  const text = read(agent);
   const fm = text.split('---')[1] ?? '';
   const declared = fm.match(/^name:\s*(\S+)/m)?.[1];
   if (declared !== `aidlc-${p}`)
@@ -758,11 +765,8 @@ const FRAMEWORK_TOOLS = [
   'aidlc-build-surfaces.mjs',
   'aidlc-scaffold.mjs',
 ];
-// CRLF-normalized so a Windows autocrlf checkout doesn't read as tampering
-const hashFile = (p) =>
-  createHash('sha256')
-    .update(readFileSync(p, 'utf8').replace(/\r\n/g, '\n'))
-    .digest('hex');
+// read() is CRLF-normalized, so a Windows autocrlf checkout doesn't read as tampering
+const hashFile = (p) => createHash('sha256').update(read(p)).digest('hex');
 
 function frameworkLockedFiles() {
   const acc = [];
@@ -773,7 +777,7 @@ function frameworkLockedFiles() {
     acc.push(r);
   }
   for (const t of FRAMEWORK_TOOLS) {
-    if (existsSync(join(REPO, 'tools', t))) acc.push(join('tools', t));
+    if (existsSync(join(REPO, 'tools', t))) acc.push(`tools/${t}`);
   }
   return acc.sort();
 }
@@ -789,7 +793,7 @@ if (process.argv.includes('--lock')) {
           'GENERATED by tools/aidlc-check.mjs --lock (framework maintainers only) — SHA-256 per framework-owned file. Adopting projects never edit these files or this lock; project-specific rules live in ai/standards/ and ai/templates/jira/. To change the framework, open a change-request issue upstream.',
         // Stamped from the framework repo's package.json at lock time, not read at
         // check time — in an adopting repo, package.json is the team's own.
-        version: JSON.parse(readFileSync(join(REPO, 'package.json'), 'utf8')).version,
+        version: JSON.parse(read(join(REPO, 'package.json'))).version,
         files,
       },
       null,
@@ -804,7 +808,7 @@ if (process.argv.includes('--lock')) {
 } else {
   let lockedEntries = {};
   try {
-    lockedEntries = JSON.parse(readFileSync(LOCK_PATH, 'utf8')).files ?? {};
+    lockedEntries = JSON.parse(read(LOCK_PATH)).files ?? {};
   } catch (e) {
     err(`cannot read ${rel(LOCK_PATH)}: ${e.message}`);
   }
@@ -842,7 +846,7 @@ if (errors.length) {
 // The framework version is stamped into the lock, so it reports what this repo
 // actually runs — visible on every CI run without anyone having to try an update.
 const stampedVersion = existsSync(LOCK_PATH)
-  ? JSON.parse(readFileSync(LOCK_PATH, 'utf8')).version
+  ? JSON.parse(read(LOCK_PATH)).version
   : undefined;
 console.log(
   `aidlc-check: OK (framework ${stampedVersion ?? 'version unknown'}, ${defs.size} IDs, ${warnings.length} warnings)`,

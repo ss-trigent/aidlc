@@ -27,6 +27,11 @@ import { join, resolve, dirname, relative, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
+// CRLF-normalized reads: Windows autocrlf checkouts must parse and compare like LF ones
+function read(p) {
+  return readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+}
+
 const args = process.argv.slice(2);
 const update = args.includes('--update');
 const force = args.includes('--force') || update;
@@ -36,11 +41,61 @@ const positional = args.filter(
 );
 const TARGET = resolve(positional[0] ?? process.cwd());
 
+// ---- stale npx cache guard ----------------------------------------------------
+// `npx github:ss-trigent/aidlc` caches its first install forever and never
+// re-checks the repo, so users would silently keep running old versions. The npx
+// cache records the installed commit in node_modules/.package-lock.json; compare
+// it with the repo's current HEAD and re-run the latest, pinned by sha — a new
+// spec bypasses the stale cache entry. Skipped silently when offline, when git
+// is unavailable, or when not running from an npx/npm git install.
+// Escape hatch (deliberately pinned runs): AIDLC_NO_FRESH=1.
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_URL = 'https://github.com/ss-trigent/aidlc.git';
+if (!process.env.AIDLC_NO_FRESH) {
+  try {
+    const lock = JSON.parse(
+      read(join(HERE, '..', '..', '.package-lock.json')),
+    );
+    const cachedSha = (lock.packages?.['node_modules/aidlc']?.resolved ?? '').match(
+      /^git\+.*#([0-9a-f]{40})$/,
+    )?.[1];
+    const head = cachedSha
+      ? execFileSync('git', ['ls-remote', REPO_URL, 'HEAD'], {
+          encoding: 'utf8',
+          timeout: 15000,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).split(/\s/)[0]
+      : undefined;
+    if (cachedSha && head && head !== cachedSha) {
+      console.log(
+        `newer aidlc available (${head.slice(0, 7)}; your npx cache has ${cachedSha.slice(0, 7)}) — running the latest…`,
+      );
+      const spec = `github:ss-trigent/aidlc#${head}`;
+      const npm = process.env.npm_execpath ?? '';
+      if (!npm) {
+        console.error(`cannot re-run automatically here; run:\n  npx --yes ${spec} ${args.join(' ')}`.trimEnd());
+        process.exit(1);
+      }
+      try {
+        execFileSync(
+          process.execPath,
+          [npm, ...(basename(npm).includes('npx') ? [] : ['exec']), '--yes', '--', spec, ...args],
+          { stdio: 'inherit', env: { ...process.env, AIDLC_NO_FRESH: '1' } },
+        );
+        process.exit(0);
+      } catch (e) {
+        process.exit(e.status ?? 1);
+      }
+    }
+  } catch {
+    /* offline, no git, or not an npx install — run what we have */
+  }
+}
+
 // ---- locate the payload -----------------------------------------------------
 // Layouts, in order: --payload; bundled inside a payload (this script lives at
 // <payload>/framework/tools/); the framework repo / npm install (this script
 // lives at <repo>/tools/, payload at <repo>/packages/aidlc-plugin).
-const HERE = dirname(fileURLToPath(import.meta.url));
 function findPayload() {
   if (payloadFlag !== -1 && !args[payloadFlag + 1]) {
     console.error('--payload requires a directory argument');
@@ -96,13 +151,13 @@ function walk(dir, acc = []) {
 const plan = new Map(); // target-relative path -> content
 const put = (rel, content) => plan.set(rel, content);
 const copyTree = (srcDir, destRel) => {
-  for (const f of walk(srcDir)) put(join(destRel, relative(srcDir, f)), readFileSync(f, 'utf8'));
+  for (const f of walk(srcDir)) put(join(destRel, relative(srcDir, f)), read(f));
 };
 
 copyTree(join(PAYLOAD, 'framework', 'ai'), 'ai');
 for (const f of readdirSync(join(PAYLOAD, 'framework', 'tools'))) {
   if (f.endsWith('.mjs'))
-    put(join('tools', f), readFileSync(join(PAYLOAD, 'framework', 'tools', f), 'utf8'));
+    put(join('tools', f), read(join(PAYLOAD, 'framework', 'tools', f)));
 }
 for (const d of readdirSync(join(PAYLOAD, 'skills'))) {
   if (d === 'aidlc-init') continue; // scaffolder is plugin-only; this script replaces it here
@@ -110,8 +165,8 @@ for (const d of readdirSync(join(PAYLOAD, 'skills'))) {
 }
 if (existsSync(join(PAYLOAD, 'agents')))
   for (const f of readdirSync(join(PAYLOAD, 'agents')))
-    put(join('.claude', 'agents', f), readFileSync(join(PAYLOAD, 'agents', f), 'utf8'));
-const seed = (name) => readFileSync(join(PAYLOAD, 'framework', 'seed', name), 'utf8');
+    put(join('.claude', 'agents', f), read(join(PAYLOAD, 'agents', f)));
+const seed = (name) => read(join(PAYLOAD, 'framework', 'seed', name));
 put(join('knowledge', 'traceability', 'manifest.json'), seed('manifest.json'));
 
 // Artifact-home READMEs: the Architect and UX charters send those personas here
@@ -137,7 +192,7 @@ for (const h of HOMES) put(join(h, '.gitkeep'), '');
 const wfDir = join(TARGET, '.github', 'workflows');
 const hasCheckWorkflow =
   existsSync(wfDir) &&
-  readdirSync(wfDir).some((f) => readFileSync(join(wfDir, f), 'utf8').includes('aidlc-check.mjs'));
+  readdirSync(wfDir).some((f) => read(join(wfDir, f)).includes('aidlc-check.mjs'));
 if (!hasCheckWorkflow)
   put(
     join('.github', 'workflows', 'aidlc-check.yml'),
@@ -187,7 +242,7 @@ for (const rel of [...plan.keys()]) {
 const collisions = [];
 for (const [rel, content] of plan) {
   const p = join(TARGET, rel);
-  if (existsSync(p) && readFileSync(p, 'utf8') !== content) collisions.push(rel);
+  if (existsSync(p) && read(p) !== content) collisions.push(rel);
 }
 if (collisions.length && !force) {
   console.error(
@@ -225,7 +280,7 @@ traceability manifest or your CI.
 for (const name of ['AGENTS.md', 'CLAUDE.md']) {
   const p = join(TARGET, name);
   if (name === 'CLAUDE.md' && !existsSync(p)) continue; // only annotate an existing CLAUDE.md
-  if (existsSync(p) && readFileSync(p, 'utf8').includes('ai/AI-DLC.md')) continue;
+  if (existsSync(p) && read(p).includes('ai/AI-DLC.md')) continue;
   appendFileSync(p, (existsSync(p) ? '\n' : `# ${basename(TARGET)}\n`) + AGENTS_SECTION);
   console.log(`pointed ${name} at the framework`);
 }

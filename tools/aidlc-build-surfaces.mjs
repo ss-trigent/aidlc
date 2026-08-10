@@ -25,6 +25,11 @@ import {
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 
+// CRLF-normalized reads: Windows autocrlf checkouts must parse and compare like LF ones
+function read(p) {
+  return readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+}
+
 const REPO = process.cwd();
 const PERSONAS = [
   'aidlc',
@@ -43,7 +48,7 @@ const READ_ONLY_NOTE =
   '> **Read-only persona.** This tool cannot restrict your tools, so the charter rule stands on you: never create or edit repository files. Draft any content (ADRs, reports) into your reply for a writable persona or the human to land through a reviewed PR.';
 
 function parse(path) {
-  const text = readFileSync(path, 'utf8');
+  const text = read(path);
   const m = text.match(/^---\n([\s\S]*?)\n---\n/);
   if (!m) throw new Error(`${path}: no frontmatter`);
   const desc = m[1].match(/^description:\s*(.+)$/m)?.[1];
@@ -103,7 +108,7 @@ let drift = 0;
 for (const [rel, content] of files) {
   const target = join(REPO, rel);
   if (check) {
-    if (!existsSync(target) || readFileSync(target, 'utf8') !== content) {
+    if (!existsSync(target) || read(target) !== content) {
       console.error(`DRIFT: ${rel} does not match its .claude/ source`);
       drift++;
     }

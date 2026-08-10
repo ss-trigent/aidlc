@@ -16,6 +16,11 @@ import {
 } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 
+// CRLF-normalized reads: Windows autocrlf checkouts must parse and compare like LF ones
+function read(p) {
+  return readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+}
+
 const REPO = process.cwd();
 const PLUGIN = join(REPO, 'packages', 'aidlc-plugin');
 const PERSONAS = [
@@ -58,28 +63,28 @@ const files = new Map();
 
 // framework payload: the whole ai/ folder + the validator
 for (const f of walkSources(join(REPO, 'ai'))) {
-  files.set(join('framework', relative(REPO, f)), readFileSync(f, 'utf8'));
+  files.set(join('framework', relative(REPO, f)), read(f));
 }
 files.set(
   join('framework', 'tools', 'aidlc-check.mjs'),
-  readFileSync(join(REPO, 'tools', 'aidlc-check.mjs'), 'utf8'),
+  read(join(REPO, 'tools', 'aidlc-check.mjs')),
 );
 // aidlc-check imports this for check 12, and ai/context/jira-sync.md names it as
 // the only permitted writer — so it has to ship with the framework, not beside it.
 files.set(
   join('framework', 'tools', 'aidlc-jira.mjs'),
-  readFileSync(join(REPO, 'tools', 'aidlc-jira.mjs'), 'utf8'),
+  read(join(REPO, 'tools', 'aidlc-jira.mjs')),
 );
 // generates the Cursor/opencode/Copilot persona surfaces in adopting repos (ADR-005)
 files.set(
   join('framework', 'tools', 'aidlc-build-surfaces.mjs'),
-  readFileSync(join(REPO, 'tools', 'aidlc-build-surfaces.mjs'), 'utf8'),
+  read(join(REPO, 'tools', 'aidlc-build-surfaces.mjs')),
 );
 // the deterministic scaffolder: /aidlc-init drives it in Claude Code, and teams
 // without Claude Code run it directly from a clone (or npx) — one scaffold path
 files.set(
   join('framework', 'tools', 'aidlc-scaffold.mjs'),
-  readFileSync(join(REPO, 'tools', 'aidlc-scaffold.mjs'), 'utf8'),
+  read(join(REPO, 'tools', 'aidlc-scaffold.mjs')),
 );
 
 // seed files for /aidlc-init
@@ -276,7 +281,7 @@ files.set(
 // not-installed pointer so the plugin works in repos without the framework yet
 for (const name of PERSONAS) {
   const src = join(REPO, '.claude', 'skills', name, 'SKILL.md');
-  const text = readFileSync(src, 'utf8');
+  const text = read(src);
   const lines = text.split('\n');
   const h1 = lines.findIndex((l) => l.startsWith('# '));
   lines.splice(
@@ -293,7 +298,7 @@ for (const name of PERSONAS) {
 for (const name of PERSONAS) {
   if (name === 'aidlc') continue; // router is a skill only, it has no agent form
   const src = join(REPO, '.claude', 'agents', `aidlc-${name}.md`);
-  files.set(join('agents', `aidlc-${name}.md`), readFileSync(src, 'utf8'));
+  files.set(join('agents', `aidlc-${name}.md`), read(src));
 }
 
 // the /aidlc-init scaffolder — plugin-only skill
@@ -336,7 +341,7 @@ let drift = 0;
 for (const [rel, content] of files) {
   const target = join(PLUGIN, rel);
   if (check) {
-    if (!existsSync(target) || readFileSync(target, 'utf8') !== content) {
+    if (!existsSync(target) || read(target) !== content) {
       console.error(
         `DRIFT: packages/aidlc-plugin/${rel} does not match its source`,
       );

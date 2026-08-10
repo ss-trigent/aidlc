@@ -21,6 +21,11 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
+// CRLF-normalized reads: Windows autocrlf checkouts must parse and compare like LF ones
+function read(p) {
+  return readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+}
+
 const REPO = process.cwd();
 const TPL = join(REPO, 'ai', 'templates', 'jira');
 const MANIFEST = join(REPO, 'knowledge', 'traceability', 'manifest.json');
@@ -205,7 +210,7 @@ export function validateTemplates(dir = TPL) {
     if (!f.endsWith('.md') || f === 'README.md') continue;
     problems.push(
       ...templateIssues(
-        readFileSync(join(dir, f), 'utf8'),
+        read(join(dir, f)),
         `ai/templates/jira/${f}`,
       ),
     );
@@ -291,14 +296,14 @@ function prUrlFor(id) {
   }
 }
 
-const manifest = () => JSON.parse(readFileSync(MANIFEST, 'utf8'));
+const manifest = () => JSON.parse(read(MANIFEST));
 
 function brdRequirements() {
   const map = new Map();
   const dir = join(REPO, 'inception', 'product', 'requirements');
   if (!existsSync(dir)) return map;
   for (const f of readdirSync(dir).filter((x) => x.endsWith('.md'))) {
-    for (const line of readFileSync(join(dir, f), 'utf8').split('\n')) {
+    for (const line of read(join(dir, f)).split('\n')) {
       const m = line.match(/^\|\s*((?:REQ|NFR|RISK)-\d{3})\s*\|(.*)$/);
       if (!m) continue;
       // REQ rows put the requirement in column 2; NFR rows put a category there
@@ -322,7 +327,7 @@ function storyFile(us) {
   if (!f) die(`no story file for ${us}`);
   return {
     path: join('inception/stories/user-stories', f),
-    text: readFileSync(join(dir, f), 'utf8'),
+    text: read(join(dir, f)),
   };
 }
 
@@ -537,7 +542,7 @@ function openQuestionsFor(us, mf) {
   for (const scr of mf.stories[us]?.screens ?? []) {
     const path = mf.screens?.[scr]?.artifact;
     if (!path || !existsSync(join(REPO, path))) continue;
-    for (const line of readFileSync(join(REPO, path), 'utf8').split('\n')) {
+    for (const line of read(join(REPO, path)).split('\n')) {
       const m = line.match(
         /^\|\s*\d+\s*\|\s*([^|]+?)\s*\|[^|]*\|\s*([^|]+?)\s*\|\s*open\s*\|/i,
       );
@@ -555,7 +560,7 @@ function openQuestionsFor(us, mf) {
 
 // ---- fill --------------------------------------------------------------
 function render(tplName, values) {
-  const raw = readFileSync(join(TPL, tplName), 'utf8');
+  const raw = read(join(TPL, tplName));
   const problems = templateIssues(raw, `ai/templates/jira/${tplName}`);
   if (problems.length) die(problems.join('\n'));
   const { fields, body } = parseTemplate(raw, tplName);
@@ -648,7 +653,7 @@ function buildTests(us, storyKey) {
   const tests = entry.tests ?? [];
   const contents = tests
     .filter((t) => existsSync(join(REPO, t)))
-    .map((t) => ({ file: t, text: readFileSync(join(REPO, t), 'utf8') }));
+    .map((t) => ({ file: t, text: read(join(REPO, t)) }));
 
   return acBlocks(text).map((ac) => {
     const hit = contents.find((c) =>
@@ -704,7 +709,7 @@ function buildEpic(id) {
     readdirSync(dir).find((x) => x.startsWith(id)) ??
     die(`no epic file for ${id}`);
   const path = join('inception/stories/epics', f);
-  const text = readFileSync(join(dir, f), 'utf8');
+  const text = read(join(dir, f));
   const mf = manifest();
   const stories = [
     ...text.matchAll(/^\|\s*(US-\d{3})\s*\|\s*([^|]+?)\s*\|/gm),
