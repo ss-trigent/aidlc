@@ -28,8 +28,8 @@
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
     "tools/aidlc-build-plugin.mjs": "3b780c0fb775d5c0040b89d500e36923e87f83f519082be8ddd5ebda67843e36",
     "tools/aidlc-build-surfaces.mjs": "abf119d62366cc564a52d5fd5db146b65faf3a7bf09feea5ad69c0957df90c0f",
-    "tools/aidlc-check.mjs": "63c7101996bbe71a1d29a103e61c1484c953a091ddd0a2d3612a8157778fa390",
+    "tools/aidlc-check.mjs": "dba55a963c6fc9c3d03d96a9762de3978322d5b9dff5c6b34c30d012b2fe91a2",
     "tools/aidlc-jira.mjs": "6e87c26c4732c0fca02d90d5b8b32569f3e326a38f19ab45812245d25f115744",
-    "tools/aidlc-scaffold.mjs": "51f7c34bba45d91c3ac310edb32cca03e0708ea1db1c93a4595d56763f6d8c15"
+    "tools/aidlc-scaffold.mjs": "dc4914fc206deb3341178ca9af12347bec1616b285c49d40b524dfc3ec0b9370"
   }
 }

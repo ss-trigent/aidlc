@@ -20,3 +20,16 @@ jobs:
       # Self-checks for the tools themselves — today: that --update refreshes the
       # framework without overwriting anything an adopting team owns.
       - run: npm test
+
+  # Regression coverage for Windows installs: path.relative returns backslash
+  # paths on win32, which once broke every framework-lock lookup during scaffold.
+  # The scaffold test runs the full scaffold -> check flow, so it fails here if
+  # any path comparison stops being separator-safe.
+  tools-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test

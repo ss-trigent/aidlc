@@ -51,7 +51,7 @@ import {
   existsSync,
   writeFileSync,
 } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -73,7 +73,9 @@ function walk(dir, pred, acc = []) {
   }
   return acc;
 }
-const rel = (p) => relative(REPO, p);
+// Always forward slashes: lock keys, manifest paths, and PROJECT_OWNED prefixes
+// are written with '/', and path.relative returns '\' on Windows.
+const rel = (p) => relative(REPO, p).split(sep).join('/');
 
 // An AC counts as proven only when cited in the title of an active `it(`/`test(`
 // (`.each` allowed) — a citation in a comment or a skipped test is not proof.
@@ -773,7 +775,7 @@ function frameworkLockedFiles() {
     acc.push(r);
   }
   for (const t of FRAMEWORK_TOOLS) {
-    if (existsSync(join(REPO, 'tools', t))) acc.push(join('tools', t));
+    if (existsSync(join(REPO, 'tools', t))) acc.push(`tools/${t}`);
   }
   return acc.sort();
 }

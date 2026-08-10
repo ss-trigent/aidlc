@@ -36,11 +36,61 @@ const positional = args.filter(
 );
 const TARGET = resolve(positional[0] ?? process.cwd());
 
+// ---- stale npx cache guard ----------------------------------------------------
+// `npx github:ss-trigent/aidlc` caches its first install forever and never
+// re-checks the repo, so users would silently keep running old versions. The npx
+// cache records the installed commit in node_modules/.package-lock.json; compare
+// it with the repo's current HEAD and re-run the latest, pinned by sha — a new
+// spec bypasses the stale cache entry. Skipped silently when offline, when git
+// is unavailable, or when not running from an npx/npm git install.
+// Escape hatch (deliberately pinned runs): AIDLC_NO_FRESH=1.
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_URL = 'https://github.com/ss-trigent/aidlc.git';
+if (!process.env.AIDLC_NO_FRESH) {
+  try {
+    const lock = JSON.parse(
+      readFileSync(join(HERE, '..', '..', '.package-lock.json'), 'utf8'),
+    );
+    const cachedSha = (lock.packages?.['node_modules/aidlc']?.resolved ?? '').match(
+      /^git\+.*#([0-9a-f]{40})$/,
+    )?.[1];
+    const head = cachedSha
+      ? execFileSync('git', ['ls-remote', REPO_URL, 'HEAD'], {
+          encoding: 'utf8',
+          timeout: 15000,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).split(/\s/)[0]
+      : undefined;
+    if (cachedSha && head && head !== cachedSha) {
+      console.log(
+        `newer aidlc available (${head.slice(0, 7)}; your npx cache has ${cachedSha.slice(0, 7)}) — running the latest…`,
+      );
+      const spec = `github:ss-trigent/aidlc#${head}`;
+      const npm = process.env.npm_execpath ?? '';
+      if (!npm) {
+        console.error(`cannot re-run automatically here; run:\n  npx --yes ${spec} ${args.join(' ')}`.trimEnd());
+        process.exit(1);
+      }
+      try {
+        execFileSync(
+          process.execPath,
+          [npm, ...(basename(npm).includes('npx') ? [] : ['exec']), '--yes', '--', spec, ...args],
+          { stdio: 'inherit', env: { ...process.env, AIDLC_NO_FRESH: '1' } },
+        );
+        process.exit(0);
+      } catch (e) {
+        process.exit(e.status ?? 1);
+      }
+    }
+  } catch {
+    /* offline, no git, or not an npx install — run what we have */
+  }
+}
+
 // ---- locate the payload -----------------------------------------------------
 // Layouts, in order: --payload; bundled inside a payload (this script lives at
 // <payload>/framework/tools/); the framework repo / npm install (this script
 // lives at <repo>/tools/, payload at <repo>/packages/aidlc-plugin).
-const HERE = dirname(fileURLToPath(import.meta.url));
 function findPayload() {
   if (payloadFlag !== -1 && !args[payloadFlag + 1]) {
     console.error('--payload requires a directory argument');
