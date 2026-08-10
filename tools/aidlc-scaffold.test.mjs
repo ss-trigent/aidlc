@@ -2,7 +2,7 @@
 // destroys real work: --update must refresh framework files while leaving every
 // team-owned file exactly as the team left it.
 //
-//   node --test tools/
+//   npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';

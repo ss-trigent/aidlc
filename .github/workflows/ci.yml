@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       # AI-DLC policy-as-code: artifact IDs, traceability links, AC->test coverage,
       # generated plugin-payload and persona-surface drift, framework-lock integrity.
       # Required status for merge — this is what makes the gates governance, not guidance.
@@ -31,5 +31,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm test
