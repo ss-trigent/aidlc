@@ -28,7 +28,7 @@
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
     "tools/aidlc-build-plugin.mjs": "e94634b33831cd26a260851bdbf9c3aa8550c80fb1eb08623931b7fd2446fb06",
     "tools/aidlc-build-surfaces.mjs": "6c3f630f47671be517e207899e46e0f2833f0cf24f235981006a3804e692608b",
-    "tools/aidlc-check.mjs": "7033f374ff27b78f5f264f0884769ea4dfa1164ca2602dc106888bc300383821",
+    "tools/aidlc-check.mjs": "f2990cae1de371b297f7a2654382f88f290291e28f40a05bca3d995dba2eeeaa",
     "tools/aidlc-jira.mjs": "18e35990b478be478412e59a8d9e77fda37a356bfb86ff9c2a113b93c8a99215",
     "tools/aidlc-scaffold.mjs": "f1e6586a6f38efeb1b81a4af9f401198e5bb88e7c67c9aa36f2f34d7ab3ccb62"
   }

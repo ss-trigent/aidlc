@@ -92,6 +92,15 @@ const citesAc = (contents, us, ac) =>
   ).test(contents);
 const SKIPPED_TEST =
   /\b(?:describe|it|test)\.skip\s*\(|\bx(?:it|test|describe)\s*\(/;
+// What counts as a test file, in any stack this framework might be installed in.
+const TEST_FILE = /\.(spec|test)\.[cm]?[jt]sx?$/;
+// ...except this repo's own tool self-tests. They build fixture repositories, so
+// they legitimately contain synthetic US-###/AC-## text that is data, not a
+// citation — reading it as one would make the framework fail its own check 5.
+// They are never shipped to adopting repos (the payload lists tools explicitly),
+// so this exclusion cannot hide a product spec anywhere else.
+const SELF_TEST = /^tools\/aidlc-[^/]*\.test\.mjs$/;
+const isProductSpec = (p) => TEST_FILE.test(p) && !SELF_TEST.test(p);
 
 // Which stories are in delivery right now? Status lives on GitHub, not in files,
 // so this is derived from the branch under review — GITHUB_HEAD_REF on a PR,
@@ -452,10 +461,25 @@ if (manifest) {
   }
 
   // ---- 5. reverse link: spec citations must be in the manifest -------------
-  const specs = [
-    ...walk(join(REPO, 'apps'), (p) => p.endsWith('.spec.ts')),
-    ...walk(join(REPO, 'libs'), (p) => p.endsWith('.spec.ts')),
-  ];
+  // Test files are found by asking git, not by assuming a layout: Nx puts them
+  // under apps/ and libs/, a flat repo under src/ or test/, and an e2e layer
+  // wherever `--profile e2e --root` put it. Anything git tracks and names like a
+  // test is a candidate; anything untracked was never the repo's to validate.
+  let specs;
+  try {
+    specs = execFileSync('git', ['ls-files', '-z'], {
+      cwd: REPO,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 1 << 26,
+    })
+      .toString()
+      .split('\0')
+      .filter((p) => p && isProductSpec(p))
+      .map((p) => join(REPO, p));
+  } catch {
+    // not a git checkout (a scaffold run before `git init`) — walk instead
+    specs = walk(REPO, (p) => isProductSpec(rel(p)));
+  }
   for (const spec of specs) {
     const cited = new Set(
       [...read(spec).matchAll(/US-\d{3}/g)].map((m) => m[0]),
