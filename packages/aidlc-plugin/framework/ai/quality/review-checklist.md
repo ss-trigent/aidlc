@@ -42,6 +42,8 @@ Used by DEV for self-review and by the Architect persona for advisory review, bo
 ## 8. Tests & docs
 
 - [ ] Tests assert behavior, are deterministic, cover negative + boundary
+- [ ] Proven at the lowest sufficient level (unit < integration < API < e2e) — a criterion pushed to a browser test that a unit test could prove is a finding
+- [ ] Browser tests: generated from a plan that was reviewed first, locators verified against the real DOM, no retry or timeout hiding a real failure
 - [ ] Docs updated (JSDoc / README / architecture)
 
 **Ratings:** `blocker` (correctness/security) · `major` (arch/perf/coverage) · `minor` (practice) · `nit` (style).

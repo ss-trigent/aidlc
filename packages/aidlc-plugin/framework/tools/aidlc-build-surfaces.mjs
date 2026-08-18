@@ -66,8 +66,13 @@ function withNote(body) {
 // ---- assemble the expected surfaces as [repo-relative path -> content] ------
 const files = new Map();
 
+// A repo may install only some personas — `aidlc-scaffold --profile e2e` in a
+// standalone QA repo ships qa and nothing else. Absent source = nothing to
+// generate, not a crash; check 10 is what enforces completeness where it matters.
 for (const p of PERSONAS) {
-  const skill = parse(join(REPO, '.claude', 'skills', p, 'SKILL.md'));
+  const src = join(REPO, '.claude', 'skills', p, 'SKILL.md');
+  if (!existsSync(src)) continue;
+  const skill = parse(src);
 
   // skills: the Agent Skills format is shared by all three tools — mirror verbatim
   for (const dir of ['.cursor', '.opencode', '.github']) {
@@ -82,7 +87,9 @@ for (const p of PERSONAS) {
 }
 
 for (const p of AGENT_PERSONAS) {
-  const agent = parse(join(REPO, '.claude', 'agents', `aidlc-${p}.md`));
+  const agentSrc = join(REPO, '.claude', 'agents', `aidlc-${p}.md`);
+  if (!existsSync(agentSrc)) continue;
+  const agent = parse(agentSrc);
   const ro = READ_ONLY.includes(p);
   const guarded = ro ? withNote(agent.body) : agent.body;
 

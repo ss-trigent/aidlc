@@ -389,7 +389,7 @@
 <dl class="band">
   <div class="stat"><dt>Gates</dt><dd>3<small>Discovery · Delivery · Release</small></dd></div>
   <div class="stat"><dt>AI personas</dt><dd>7<small>one per human counterpart</small></dd></div>
-  <div class="stat"><dt>Validator checks</dt><dd>14<small>one required CI status</small></dd></div>
+  <div class="stat"><dt>Validator checks</dt><dd>15<small>one required CI status</small></dd></div>
   <div class="stat"><dt>Tracked IDs</dt><dd>50<small>all unique, all linked</small></dd></div>
   <div class="stat"><dt>Status files</dt><dd>0<small>status derives from GitHub</small></dd></div>
   <div class="stat"><dt>Editors supported</dt><dd>4<small>Claude Code · Cursor · opencode · Copilot</small></dd></div>
@@ -615,7 +615,7 @@
         <article class="who-card">
           <p class="cmd">/qa</p>
           <p class="human">QA engineer</p>
-          <p class="job">Derives tests from the requirement before reading the code, and files reproducible defects.</p>
+          <p class="job">Derives tests from the requirement before reading the code, and files reproducible defects. For browser-level work it writes a step-by-step plan you approve <em>before</em> any test exists, then generates Playwright tests against the running app.</p>
           <div class="xchg">
             <div><span>You</span><i>“This screen shows the wrong total.”</i></div>
             <div><span>Get</span>A defect issue with steps and real output — and the fix needs a regression test.</div>
@@ -958,7 +958,7 @@
       <h2>One command decides if any of this is real</h2>
       <p class="lede">
         The operating principle is blunt: <strong>a rule that is not checked by CI or by a GitHub
-        setting is guidance, not governance.</strong> Fourteen checks run on every pull request as a
+        setting is guidance, not governance.</strong> Fifteen checks run on every pull request as a
         single required status.
       </p>
 
@@ -976,7 +976,8 @@
         <div class="ck"><span class="n">11</span><p><b>Design is complete:</b> a story with UI cites a screen, a screen traces to a story or the requirement it serves, every numbered state is rendered by a component, and the exported token file matches the stylesheet <em>— eight sub-rules</em></p></div>
         <div class="ck"><span class="n">12</span><p><b>Ticket templates are safe:</b> none declares a field that would forward approval or duplicate what the tracker owns, no unknown placeholders, no stale markup <em>— see section 07</em></p></div>
         <div class="ck"><span class="n">13</span><p><b>The Cursor, opencode and Copilot persona surfaces match their sources</b> — generated files, never hand-edited <em>— ADR-005</em></p></div>
-        <div class="ck"><span class="n">14</span><p><b>The framework itself cannot be quietly edited.</b> Every framework-owned file matches a shipped hash lock; an adopting team edits only its own standards, ticket templates and project context — a different rule goes upstream as a change request <em>— newest addition, the shared-library ownership rule</em></p></div>
+        <div class="ck"><span class="n">14</span><p><b>The framework itself cannot be quietly edited.</b> Every framework-owned file matches a shipped hash lock; an adopting team edits only its own standards, ticket templates and project context — a different rule goes upstream as a change request</p></div>
+        <div class="ck"><span class="n">15</span><p><b>Browser-test evidence from another repository is checked, or absent.</b> A QA team that keeps its end-to-end tests in their own repo publishes an evidence file; the validator checks every criterion it claims really exists and that every pass carries the run it came from. No file means no requirement — a team whose tests live in this repo is untouched by the rule <em>— newest addition, the end-to-end layer &middot; ADR-006</em></p></div>
       </div>
 
       <div class="cards">
@@ -1217,7 +1218,7 @@
           <h4>Built <span class="chip k-ok">Green</span></h4>
           <p>Requirements and three stories · two screen specs with eleven numbered states · design
           tokens plus one component · the whole traceability graph (50 IDs, validator green) · the
-          validator and its fourteen checks · the reordered Gate 1 with two accepted decision records
+          validator and its fifteen checks · the reordered Gate 1 with two accepted decision records
           (ADR-003, ADR-004) · persona surfaces for Cursor, opencode and Copilot, generated and
           drift-checked (ADR-005) · the framework packaged so another team can install it — framework-owned files hash-locked, with an install interview that tailors standards and project context to the adopting stack.</p>
         </div>

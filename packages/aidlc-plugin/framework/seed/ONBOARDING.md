@@ -28,7 +28,7 @@ In your editor, type the command for your role:
 /ux           screens, states, the design system
 /architect    system + DB design, ADRs, PR review
 /dev          implement one story as one PR
-/qa           tests derived from requirements, bug reports
+/qa           tests derived from requirements, browser tests, bug reports
 /devops       CI, releases, rollback
 /manager      status, routing, delivery plans
 ```
@@ -57,6 +57,7 @@ wrong assumption is cheap to catch in a plan and expensive to catch in a diff.
 | `inception/design/`       | Screen specs, design tokens, component previews             |
 | `inception/architecture/` | DB design + app architecture                                |
 | `knowledge/`              | Traceability manifest and architecture decisions (`ADR-###`) |
+| `<e2e-root>/`             | Browser tests, if this project installed them: reviewed plans + generated specs. Where it is comes from `testDir` in its `playwright.config.ts` |
 
 ## 5. The one rule worth memorising
 

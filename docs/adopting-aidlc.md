@@ -33,7 +33,7 @@ Open Claude Code **in the repository you're adopting into** and run:
 One command, one interview. What it does, in order:
 
 1. **Refuses to overwrite** — if `ai/AI-DLC.md` already exists it offers an upgrade diff instead of a blind reinstall
-2. **Copies the framework** — `ai/` (charters, gates, templates, quality bars, interaction rules) and the `tools/` scripts (the CI validator, the Jira boundary, the persona-surface builder)
+2. **Copies the framework** — `ai/` (charters, gates, templates, quality bars, interaction rules) and the `tools/` scripts (the CI validator, the Jira boundary, the persona-surface builder, the scaffolder itself, and the cross-repo e2e evidence tool)
 3. **Installs the personas into the repo, for every editor** — the persona skills and delegatable agents land in `.claude/`, and the surface builder generates the Cursor (`.cursor/`), opencode (`.opencode/`) and GitHub Copilot (`.github/`) wrappers from them. Everyone on the team runs the same persona version whatever they edit with, and cloning the repo is the whole setup for non-Claude editors
 4. **Tailors the project-owned files to your stack.** It first detects what the repo already answers (package manager, frameworks, test runner, DB layer), then interviews you in plain language — what the product is, whatever detection couldn't settle, conventions your team already has (which win over the seed's). It then rewrites `ai/standards/*.md` for *your* stack and generates `ai/project-context.md`, which every persona reads before working. The shipped standards come from this reference project (Nx + NestJS + Angular + TypeORM) and are a seed for form, not content — the interview exists so they never land unchanged in a different stack
 5. **Seeds traceability** — `knowledge/traceability/manifest.json` plus the generated matrix view
@@ -45,6 +45,21 @@ It never commits — the scaffold lands through a reviewed PR like everything el
 
 One rule survives every interview verbatim: the branch pattern `feat/US-###-<slug>` in `git-standards.md`. `aidlc-check` derives "story in delivery" from it, so renaming that convention would silently disable the tests-required enforcement.
 
+### Optional: the browser-test layer
+
+Nothing above installs Playwright, and nothing requires it. When you want browser-level tests:
+
+```bash
+node tools/aidlc-scaffold.mjs --profile e2e --root e2e
+```
+
+`--root` is where the layer goes — `e2e/`, `apps/ui-e2e/`, `tests/browser/`, whatever fits your repo. **No layout is assumed**, and from then on `testDir` in `playwright.config.ts` is the only record of that choice. It writes a Playwright config, an auth-setup spec, a plans folder, a CI workflow, and the Playwright MCP config in all four harness formats (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `opencode.json`) — because the harnesses genuinely disagree on the shape.
+
+Then `/qa` in any editor: "generate e2e tests for US-003". It writes a step-by-step plan you approve **before** any test is generated, then drives the running app through Playwright to produce tests whose titles cite the criteria they prove. Those specs go in the story's `tests[]` and are proven exactly like any other test.
+
+**QA who don't hold this repo** run the same command in a repo of their own: they get the `/qa` persona and the coverage tool, and none of the gate machinery. They read stories from GitHub and publish `knowledge/traceability/e2e-coverage.json` back here as a PR. Be aware of the cost, which the framework states rather than hides: this repo can verify that the evidence is well-formed and that the criteria exist, never that a remote assertion ran — so cross-repo e2e cannot block a story PR. If you need it to block, keep the tests here. See [ADR-006](../knowledge/decisions/ADR-006-e2e-testing-layer.md).
+
+
 ## Step 3 — Make the validator a required status
 
 Add to your CI workflow, after dependency install (the snippet ships in the plugin at `framework/seed/ci-step.yml`):
@@ -53,7 +68,7 @@ Add to your CI workflow, after dependency install (the snippet ships in the plug
 - run: node tools/aidlc-check.mjs
 ```
 
-Then, in the repo's branch protection rules, mark that status **required**. This is the step that turns the framework from guidance into governance: artifact IDs, bidirectional traceability, AC→test coverage, and framework-file integrity are then enforced on every PR, no matter who — or which model — drafted the work.
+Then, in the repo's branch protection rules, mark that status **required**. This is the step that turns the framework from guidance into governance: artifact IDs, bidirectional traceability, AC→test coverage, framework-file integrity, and any published cross-repo e2e evidence are then enforced on every PR, no matter who — or which model — drafted the work.
 
 ## Step 4 — Start working
 
@@ -79,7 +94,7 @@ After init, the adopting team **owns and freely edits**:
 | `ONBOARDING.md` | Seeded framework-level onboarding; add the project half |
 | CI wiring | Your workflow files |
 
-Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. Note which side the templates fall on — the **artifact** templates (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `adr.md`, `pr-description.md`) are framework-owned, because their shape is what traceability is validated against; only the Jira ones are yours. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
+Everything else under `ai/` plus the `aidlc-*` tools is **framework-owned**: `ai/framework-lock.json` ships a SHA-256 per file, and `aidlc-check` (check 14) fails the build on any edit or deletion until reverted. Note which side the templates fall on — the **artifact** templates (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `test-plan.md`, `adr.md`, `pr-description.md`) are framework-owned, because their shape is what traceability is validated against; only the Jira ones are yours. The repo-pinned persona files are framework-owned too — the generated Cursor/opencode/Copilot wrappers are drift-checked against their `.claude/` sources (check 13), and upgrades refresh all of them together. Wanting a different gate rule is legitimate — it goes upstream as a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) against this repo, never a local edit. That's what keeps every adopting team on the same framework instead of seven divergent forks.
 
 ## Updating to a newer framework version
 

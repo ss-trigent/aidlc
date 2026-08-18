@@ -40,6 +40,11 @@
 //      from tokens.css (the designer's tool-agnostic export) and never hand-edited
 //  13. the per-tool persona surfaces (Cursor, opencode, GitHub Copilot) match
 //      their .claude/ sources (tools/aidlc-build-surfaces.mjs --check, ADR-005)
+//  15. cross-repo e2e evidence (knowledge/traceability/e2e-coverage.json) is
+//      validated when present and IGNORED when absent — a repo keeping its e2e
+//      tests in-repo, or having none, is unaffected. It can never prove that a
+//      remote assertion ran, only that the claim is well-formed and the criterion
+//      exists, which is why a pass must carry the run it came from
 //  14. framework-owned files match ai/framework-lock.json (SHA-256 per file).
 //      Adopting teams edit only project-owned paths (ai/standards/,
 //      ai/templates/jira/); an edited or deleted framework file fails the
@@ -788,6 +793,10 @@ const FRAMEWORK_TOOLS = [
   'aidlc-build-plugin.mjs',
   'aidlc-build-surfaces.mjs',
   'aidlc-scaffold.mjs',
+  // Locked for the same reason as aidlc-jira: this file is IMPORTED by check 15
+  // above, so an unlocked copy would let a local edit weaken the gate that reads
+  // it while check 14 reported nothing.
+  'aidlc-qa-coverage.mjs',
 ];
 // read() is CRLF-normalized, so a Windows autocrlf checkout doesn't read as tampering
 const hashFile = (p) => createHash('sha256').update(read(p)).digest('hex');
@@ -857,6 +866,49 @@ if (process.argv.includes('--lock')) {
       err(
         `${r} is not in ai/framework-lock.json — framework-owned paths only hold files the framework ships. Project files belong in ai/standards/ or ai/templates/jira/. Framework maintainers add new framework files with: node tools/aidlc-check.mjs --lock`,
       );
+  }
+}
+
+// ---- 15. cross-repo e2e evidence, if any was published ----------------------
+// Absent file → silent. Not a warning, not a config flag, no requirement: a repo
+// whose e2e tests live in-repo (or that has none) must be entirely unaffected by
+// this check existing. Present → validated strictly, because a file nobody
+// verifies is just somewhere to write green ticks nobody earned.
+//
+// No network, ever: the evidence is a committed file reviewed in a PR, not a
+// fetch. A gate that fails because someone else's artifact host was down is a
+// gate the team learns to re-run instead of read.
+const COVERAGE_PATH = join(
+  REPO,
+  'knowledge',
+  'traceability',
+  'e2e-coverage.json',
+);
+if (existsSync(COVERAGE_PATH)) {
+  const knownSha = (sha) => {
+    try {
+      execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+        cwd: REPO,
+        stdio: 'ignore',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  try {
+    const { validateCoverage } = await import(
+      pathToFileURL(join(REPO, 'tools', 'aidlc-qa-coverage.mjs')).href
+    );
+    const { errors: e, warnings: w } = validateCoverage(
+      JSON.parse(read(COVERAGE_PATH)),
+      storyAcs,
+      knownSha,
+    );
+    for (const m of e) err(`e2e-coverage.json: ${m}`);
+    for (const m of w) warn(`e2e-coverage.json: ${m}`);
+  } catch (e) {
+    err(`cannot validate e2e-coverage.json: ${e.message}`);
   }
 }
 

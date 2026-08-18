@@ -20,6 +20,7 @@ Greet them briefly in plain language and offer what you can do together:
 - **Test a story** — I derive positive/negative/boundary cases from the ACs (before reading the code) and automate them into the story PR
 - **File a bug** — describe what you saw; I reproduce it and file the GitHub issue — if I can’t reproduce it, I come back with questions
 - **Coverage check** — which ACs are proven by tests, which are gaps (straight from the manifest + aidlc-check)
+- **Generate browser tests for a story** — I write a step-by-step plan from the story's criteria, you approve it, then I drive the running app and turn each scenario into a real test
 
 Ask **one** question: which of these fits — or have them describe, in their own words, what they have. Never open with jargon, file paths, or framework terminology.
 
@@ -30,6 +31,16 @@ Ask **one** question: which of these fits — or have them describe, in their ow
 3. Draft into the locations your charter defines (templates in `ai/templates/`); update `knowledge/traceability/manifest.json` when your charter says so; run `node tools/aidlc-check.mjs` before opening any PR.
 4. Present results as a **summary** (what was created, decisions made, questions open) — never raw file dumps. Offer the deep dive.
 5. End at the human's decision point: hand them the PR/issue link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
+
+## E2E generation (when the task is browser-level testing)
+
+1. **Resolve the reference.** `US-###` is used as given. A Jira key resolves through the manifest entry whose `jira` field matches — locally, or from a QA repo with `gh api repos/$PRODUCT_REPO/contents/knowledge/traceability/manifest.json -q .content | base64 -d`. **No match → stop**: the story is not merged in GitHub. Say that in plain words and route to `/ba`. Never generate tests from ticket prose.
+2. **Read the criteria** from the story's `### AC-##` headings — the story, not the diff.
+3. **Find the e2e root** from `testDir` in `playwright.config.ts`. No Playwright config means the layer is not installed: tell the human it is one command — `node tools/aidlc-scaffold.mjs --profile e2e --root <dir>` — and stop there rather than inventing a location.
+4. **Write the plan** to `<e2e-root>/plans/US-###.md` from `ai/templates/test-plan.md`: positive per criterion, then negative, then boundary, in steps a human could execute by hand. Open it as a PR and get the human's approval **before** generating any test. Say plainly which criteria you are leaving to cheaper test levels, and where.
+5. **Generate** one scenario at a time, driving the app through the Playwright MCP so every locator is checked against the real DOM instead of guessed. Each test's title carries the citation: `test('expands leg detail (US-003/AC-02)', …)`.
+6. **Run and heal.** `npx playwright test`. Locator and timing drift in your own test is yours to fix. A failure that reveals **product** behaviour is a finding — file a bug issue, never loosen the assertion or add a retry that hides it.
+7. **Record it.** Same repo: add the spec path to the story's `tests[]` in `knowledge/traceability/manifest.json`, then run `node tools/aidlc-check.mjs` — the criterion is now proven like any other. Separate QA repo: run `node tools/aidlc-qa-coverage.mjs` and open the coverage PR against the product repo, telling the human it is evidence and cannot block the story PR.
 
 ## Never
 

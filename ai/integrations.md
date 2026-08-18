@@ -13,7 +13,8 @@ The distinction matters more than the list. Exactly one integration is load-bear
 | Jira                                          | Convenience      | Tracking and the client's view go dark; **no gate is affected and the build stays green**    |
 | Design tools (Figma, Penpot, …)               | Convenience      | Nothing in the graph changes — the repo holds the spec and tokens; a tool holds pixels       |
 | Claude Design                                 | Convenience      | The design system stays repo-local and reviewable in the PR — nothing is lost from the graph |
-| MCP servers                                   | Convenience      | Personas lose reference lookups; gates unaffected                                            |
+| MCP servers (reference)                       | Convenience      | Personas lose reference lookups; gates unaffected                                            |
+| Playwright + Playwright MCP                   | Convenience      | Browser tests stop running. No gate is affected: cross-repo e2e evidence is validated only when present, and same-repo e2e specs are ordinary tests |
 | Cursor / opencode / GitHub Copilot            | Convenience      | Those entry points go dark; the Claude surfaces, charters and gates are untouched            |
 | mattpocock/skills                             | Convenience      | Personas lose sub-techniques; charters unaffected                                            |
 
@@ -85,7 +86,9 @@ Adopted 2026-08-03 ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-
 
 ### MCP servers — read-only context only
 
-Personas may use MCP servers for **reference and context**: library documentation, workspace queries, reading external state. Currently configured: Nx (workspace/task queries) and Context7 (library documentation).
+Personas may use MCP servers for **reference and context**: library documentation, workspace queries, reading external state. Currently configured: Nx (workspace/task queries), Context7 (library documentation), and — where the e2e layer is installed — Playwright (browser automation).
+
+**Playwright MCP is the one exception to "read-only", and it is scoped rather than waved through.** It drives a browser, so it writes to a running application: that is the point, since a locator verified against the real DOM is the difference between a generated test and a guessed one. What keeps it inside the boundary below is *what* it may touch — a test environment, never a gate. It may not act against production, and nothing it does approves, merges, deploys, or edits an approved artifact. The trade-off is recorded in [ADR-006](../knowledge/decisions/ADR-006-e2e-testing-layer.md).
 
 **The boundary:** a persona must not use a write-capable MCP tool to do anything a gate governs. Nothing that merges a PR, approves a review, deploys, edits an approved artifact outside a reviewed PR, or writes project status. If an MCP server offers such a capability, using it is a gate bypass regardless of how convenient it is.
 

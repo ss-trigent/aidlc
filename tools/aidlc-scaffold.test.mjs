@@ -57,3 +57,68 @@ test('--update refuses when nothing is installed', () => {
   assert.equal(existsSync(join(target, 'ai', 'AI-DLC.md')), false);
   assert.throws(() => run(target, '--update'), /needs an existing install/);
 });
+
+test('--profile e2e installs the layer at --root and no gate machinery', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  run(target, '--profile', 'e2e', '--root', 'tests/browser');
+
+  for (const f of [
+    'tests/browser/playwright.config.ts',
+    'tests/browser/src/seed.setup.ts',
+    'tests/browser/plans/README.md',
+    '.github/workflows/e2e.yml',
+  ])
+    assert.ok(existsSync(join(target, f)), `missing ${f}`);
+
+  // the harness-agnostic claim, asserted rather than promised: four config paths,
+  // and the three shapes the harnesses actually disagree on
+  const cfg = (f) => JSON.parse(readFileSync(join(target, f), 'utf8'));
+  assert.ok(cfg('.mcp.json').mcpServers.playwright, 'Claude Code');
+  assert.ok(cfg('.cursor/mcp.json').mcpServers.playwright, 'Cursor');
+  assert.ok(cfg('.vscode/mcp.json').servers.playwright, 'VS Code uses servers, not mcpServers');
+  assert.equal(cfg('opencode.json').mcp.playwright.type, 'local', 'opencode needs a type');
+  assert.ok(Array.isArray(cfg('opencode.json').mcp.playwright.command), 'opencode command is an array');
+
+  // a standalone QA repo gets the one persona it needs, on every harness...
+  assert.ok(existsSync(join(target, 'ai', 'templates', 'test-plan.md')));
+  assert.ok(existsSync(join(target, '.claude', 'skills', 'qa', 'SKILL.md')));
+  assert.ok(existsSync(join(target, '.cursor', 'commands', 'qa.md')), 'Cursor surface generated');
+  assert.ok(existsSync(join(target, '.opencode', 'commands', 'qa.md')), 'opencode surface generated');
+  assert.ok(existsSync(join(target, '.github', 'prompts', 'qa.prompt.md')), 'Copilot surface generated');
+  // ...and none of the machinery that would imply it holds requirements or a gate
+  assert.ok(!existsSync(join(target, 'tools', 'aidlc-check.mjs')), 'no validator in a QA repo');
+  // ...but it does get the one tool that turns a run into cross-repo evidence
+  assert.ok(existsSync(join(target, 'tools', 'aidlc-qa-coverage.mjs')), 'coverage tool present');
+  assert.ok(!existsSync(join(target, 'inception')), 'a QA repo holds no requirements');
+  assert.ok(!existsSync(join(target, 'ai', 'gates')), 'a QA repo holds no gate authority');
+  assert.ok(!existsSync(join(target, 'knowledge')), 'a QA repo holds no manifest');
+  assert.ok(!existsSync(join(target, 'ai', 'roles', 'dev.md')), 'only the qa charter');
+
+  // testDir is the ONLY record of where the layer lives
+  const pw = readFileSync(join(target, 'tests/browser/playwright.config.ts'), 'utf8');
+  assert.match(pw, /testDir: '\.\/src'/);
+});
+
+test('--profile e2e adds only the layer to an installed repo', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-installed-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  run(target); // full framework first
+  const gate = readFileSync(join(target, 'ai', 'gates', 'delivery.md'), 'utf8');
+
+  // a plain second run refuses; the profile must not be caught by that guard
+  assert.throws(() => run(target), /already installed/);
+  run(target, '--profile', 'e2e');
+
+  assert.ok(existsSync(join(target, 'e2e', 'playwright.config.ts')), 'default root is e2e/');
+  assert.equal(
+    readFileSync(join(target, 'ai', 'gates', 'delivery.md'), 'utf8'),
+    gate,
+    'the framework was left alone',
+  );
+});
+
+test('--profile rejects anything but e2e', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-bad-'));
+  assert.throws(() => run(target, '--profile', 'unit'), /only profile is e2e/);
+});

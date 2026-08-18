@@ -1,0 +1,39 @@
+# Browser-level tests. In a same-repo install, make this a required status only
+# once the suite is stable — an e2e job that flakes teaches the team to re-run
+# rather than to read the failure.
+name: e2e
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+        env:
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+          E2E_USER: ${{ secrets.E2E_USER }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      # Separate QA repo only: turn the run into evidence the product repo can
+      # validate. Set PRODUCT_REPO as a repository variable to enable it. In a
+      # same-repo install it stays unset and this is skipped — there the spec path
+      # in the story's tests[] already carries the edge, and a second record of
+      # the same fact is a second thing to drift.
+      - if: always() && vars.PRODUCT_REPO != ''
+        run: node tools/aidlc-qa-coverage.mjs --repo "$GITHUB_REPOSITORY"
+        env:
+          PRODUCT_SHA: ${{ vars.PRODUCT_SHA }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report.json
+            e2e-coverage.json
+            playwright-report/

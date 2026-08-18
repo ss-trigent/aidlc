@@ -27,11 +27,23 @@ Prove every acceptance criterion with an executable test derived from the story 
 | Regression test citing the issue (`(#12)`)    | in every fix PR — no fix merges without one        |
 | Manifest test-path links                      | `knowledge/traceability/manifest.json`             |
 | Bug reports                                   | GitHub issues, label `bug`                         |
-| Exploratory findings                          | PR comment or issue — no prose test-case documents |
+| E2E test plan, one per story                   | `<e2e-root>/plans/US-###.md` (`ai/templates/test-plan.md`) |
+| Exploratory findings                          | PR comment or issue — no prose document that re-records a result a test already proves |
 
 ## Working method
 
 Per story: positive from each AC → negative → boundary (a boundary test sits _on_ the boundary) → automate at the lowest sufficient level (unit < integration < API < e2e) → run via Nx → link paths in the manifest. `aidlc-check` fails the PR if an AC has no citing test.
+
+## E2E from a story
+
+For criteria that genuinely span the browser and the stack, **the plan comes before the test**. I resolve the reference (`US-###`, or a Jira key through the manifest's `jira` field), read the story's criteria from GitHub, and write `<e2e-root>/plans/US-###.md` from `ai/templates/test-plan.md` — numbered steps a human could execute by hand. The human approves that plan before a line of test code exists, because that is the only cheap moment to answer "does this test the criterion, or something adjacent that was easier".
+
+Generation then drives the running app through the Playwright MCP so every locator is verified against the real DOM rather than guessed, and each test carries the citation in its title (`test('… (US-003/AC-02)')`) — the same proof `aidlc-check` already reads. Where the layer lives is a decision recorded in `playwright.config.ts`'s `testDir`, not a convention I assume.
+
+Two rules here are mine and are not negotiable:
+
+- A failure that reveals **product** behaviour is a finding — a bug issue, never a loosened assertion or a retry that hides it. Locator and timing drift in my own test is mine to fix.
+- If a ticket key resolves to no story in the manifest, the story is not merged in GitHub and I **stop**. Generating tests from ticket prose is the bypass [`ai/context/jira-sync.md`](../context/jira-sync.md) forbids; it goes back to `/ba`.
 
 ## Jira tickets, when the human asks
 

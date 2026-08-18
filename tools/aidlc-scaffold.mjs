@@ -6,6 +6,17 @@
 //   npx github:ss-trigent/aidlc                    same, from inside the target repo
 //   npx github:ss-trigent/aidlc --update           upgrade an installed repo to this version
 //
+//   node tools/aidlc-scaffold.mjs --profile e2e [--root <dir>]
+//                                                  install the browser-test layer
+//
+//   --profile e2e     install the Playwright + MCP e2e layer instead of the
+//                     framework. In a repo that already has the framework this
+//                     adds only the layer; in a bare repo it also installs the
+//                     one persona a standalone QA repo needs (and no validator,
+//                     gates or manifest — a QA repo holds no gate authority)
+//   --root <dir>      where the e2e layer goes (default: e2e). No layout is
+//                     assumed; from then on testDir in playwright.config.ts is
+//                     the only record of this choice
 //   --payload <dir>   explicit plugin-payload root (contains framework/, skills/, agents/)
 //   --force           overwrite existing files that differ (default: abort and list them)
 //   --update          refresh an existing install: framework files are rewritten,
@@ -36,10 +47,37 @@ const args = process.argv.slice(2);
 const update = args.includes('--update');
 const force = args.includes('--force') || update;
 const payloadFlag = args.indexOf('--payload');
+// Flags that consume the next argument — their values are not the target dir.
+const flagValue = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i === -1 ? null : args[i + 1];
+};
+const valueOf = new Set(
+  ['--payload', '--profile', '--root']
+    .map((f) => args.indexOf(f))
+    .filter((i) => i !== -1)
+    .map((i) => i + 1),
+);
 const positional = args.filter(
-  (a, i) => !a.startsWith('--') && (payloadFlag === -1 || i !== payloadFlag + 1),
+  (a, i) => !a.startsWith('--') && !valueOf.has(i),
 );
 const TARGET = resolve(positional[0] ?? process.cwd());
+
+// --profile e2e installs the browser-test layer instead of the framework. The
+// e2e root is a decision, not a convention: whatever --root says, recorded from
+// then on by testDir in playwright.config.ts and nowhere else.
+const profile = flagValue('profile');
+if (profile !== null && profile !== 'e2e') {
+  console.error(
+    `unknown --profile "${profile ?? ''}" — the only profile is e2e`,
+  );
+  process.exit(1);
+}
+const E2E_ROOT = (flagValue('root') ?? 'e2e').replace(/[\\/]+$/, '');
+if (profile && (E2E_ROOT.startsWith('/') || E2E_ROOT.split(/[\\/]/).includes('..'))) {
+  console.error(`--root must be a path inside the repository, got "${E2E_ROOT}"`);
+  process.exit(1);
+}
 
 // ---- stale npx cache guard ----------------------------------------------------
 // `npx github:ss-trigent/aidlc` caches its first install forever and never
@@ -121,7 +159,9 @@ if (!existsSync(TARGET) || !statSync(TARGET).isDirectory()) {
   process.exit(1);
 }
 const installed = existsSync(join(TARGET, 'ai', 'AI-DLC.md'));
-if (installed && !update) {
+// --profile e2e adds a layer to whatever is here; it is not a re-install, so the
+// already-installed guard below must not stop it.
+if (installed && !update && !profile) {
   console.error(
     `AI-DLC is already installed in ${TARGET} (ai/AI-DLC.md exists).\n` +
       'To upgrade it to this version, rerun with --update — framework files are refreshed, ' +
@@ -153,6 +193,65 @@ const put = (rel, content) => plan.set(rel, content);
 const copyTree = (srcDir, destRel) => {
   for (const f of walk(srcDir)) put(join(destRel, relative(srcDir, f)), read(f));
 };
+
+// Read inside the framework branch, reported in the closing message after it.
+let hasCheckWorkflow = false;
+
+// ---- --profile e2e: the browser-test layer, not the framework ---------------
+// Stack-neutral by construction: no runner, no monorepo tool, no directory
+// convention. Where it goes came from --root, and from here on the only record
+// of that is testDir in playwright.config.ts.
+const seedE2e = (name) =>
+  read(join(PAYLOAD, 'framework', 'seed', 'e2e', name));
+if (profile === 'e2e') {
+  put(join(E2E_ROOT, 'playwright.config.ts'), seedE2e('playwright.config.ts'));
+  put(join(E2E_ROOT, 'src', 'seed.setup.ts'), seedE2e('seed.setup.ts'));
+  put(join(E2E_ROOT, 'plans', 'README.md'), seedE2e('plans-README.md'));
+  put(
+    join(E2E_ROOT, '.gitignore'),
+    // Run output is evidence, not source. The auth state is a credential.
+    '.auth/\nplaywright-report.json\nplaywright-report/\ntest-results/\n',
+  );
+  // One MCP server, four harness config paths, three different shapes — the
+  // harnesses disagree, and half the team is on Cursor. This is the whole
+  // harness-agnostic claim, so it is data, not a promise in a doc.
+  put('.mcp.json', seedE2e('mcp-claude.json')); // Claude Code
+  put(join('.cursor', 'mcp.json'), seedE2e('mcp-claude.json')); // Cursor
+  put(join('.vscode', 'mcp.json'), seedE2e('mcp-vscode.json')); // VS Code / Copilot
+  put('opencode.json', seedE2e('mcp-opencode.json')); // opencode
+  put(join('.github', 'workflows', 'e2e.yml'), seedE2e('e2e-workflow.yml'));
+
+  // A standalone QA repo has no framework: give it the one persona it needs and
+  // nothing else. No aidlc-check, no gates, no inception/, no manifest — a QA
+  // repo holds no requirements and no gate authority, and shipping the validator
+  // there would imply it held both.
+  if (!installed) {
+    for (const f of [
+      join('roles', 'qa.md'),
+      join('context', 'guided-interaction.md'),
+      join('context', 'context-loading.md'),
+      join('templates', 'test-plan.md'),
+      join('standards', 'testing-standards.md'),
+    ])
+      put(join('ai', f), read(join(PAYLOAD, 'framework', 'ai', f)));
+    copyTree(join(PAYLOAD, 'skills', 'qa'), join('.claude', 'skills', 'qa'));
+    put(
+      join('.claude', 'agents', 'aidlc-qa.md'),
+      read(join(PAYLOAD, 'agents', 'aidlc-qa.md')),
+    );
+    // so /qa works in Cursor, opencode and Copilot too, not just Claude Code
+    put(
+      join('tools', 'aidlc-build-surfaces.mjs'),
+      read(join(PAYLOAD, 'framework', 'tools', 'aidlc-build-surfaces.mjs')),
+    );
+    // the one tool a QA repo does need: it turns a run into evidence the product
+    // repo can validate. An installed repo already has it from the framework.
+    put(
+      join('tools', 'aidlc-qa-coverage.mjs'),
+      read(join(PAYLOAD, 'framework', 'tools', 'aidlc-qa-coverage.mjs')),
+    );
+  }
+} else {
 
 copyTree(join(PAYLOAD, 'framework', 'ai'), 'ai');
 for (const f of readdirSync(join(PAYLOAD, 'framework', 'tools'))) {
@@ -190,7 +289,7 @@ for (const h of HOMES) put(join(h, '.gitkeep'), '');
 // CI: a complete workflow when the repo has none that runs the validator;
 // otherwise the human adds the seed step to their own workflow (printed below).
 const wfDir = join(TARGET, '.github', 'workflows');
-const hasCheckWorkflow =
+hasCheckWorkflow =
   existsSync(wfDir) &&
   readdirSync(wfDir).some((f) => read(join(wfDir, f)).includes('aidlc-check.mjs'));
 if (!hasCheckWorkflow)
@@ -214,6 +313,7 @@ jobs:
       - run: node tools/aidlc-check.mjs
 `,
   );
+}
 
 // ---- never rewrite what the team owns ---------------------------------------
 // These ship in the payload so a fresh install gets a seed, but once they exist
@@ -262,6 +362,23 @@ if (preserved.length)
   console.log(`kept ${preserved.length} team-owned file(s) untouched: ${preserved.join(', ')}`);
 
 // ---- point agents at it -------------------------------------------------------
+// A standalone QA repo gets a different pointer: it has no gates and no
+// aidlc-check, so telling its agents to run one would be a lie in a file agents
+// are told to trust.
+const E2E_SECTION = `
+## Browser tests (AI-DLC e2e layer)
+
+This repository runs the AI-DLC e2e layer. Before working here: read
+\`ai/roles/qa.md\` and \`ai/standards/testing-standards.md\`, and use \`/qa\` in any
+editor (Claude Code, Cursor, opencode, Copilot) to work on tests.
+
+The plan comes first: \`${E2E_ROOT}/plans/US-###.md\` from
+\`ai/templates/test-plan.md\`, reviewed **before** its tests are generated. Every
+test title carries the criterion it proves (\`test('… (US-###/AC-##)')\`).
+
+Test placement is recorded by \`testDir\` in \`${E2E_ROOT}/playwright.config.ts\` —
+nowhere else. Requirements live in the product repository on GitHub, never here.
+`;
 const AGENTS_SECTION = `
 ## AI-DLC
 
@@ -277,12 +394,16 @@ Upgrade the framework to its latest version with \`npx github:ss-trigent/aidlc -
 on a fresh branch — it never touches \`ai/standards/\`, \`ai/project-context.md\`, your
 traceability manifest or your CI.
 `;
+const section = profile === 'e2e' && !installed ? E2E_SECTION : AGENTS_SECTION;
+const marker = profile === 'e2e' && !installed ? 'ai/roles/qa.md' : 'ai/AI-DLC.md';
 for (const name of ['AGENTS.md', 'CLAUDE.md']) {
   const p = join(TARGET, name);
   if (name === 'CLAUDE.md' && !existsSync(p)) continue; // only annotate an existing CLAUDE.md
-  if (existsSync(p) && read(p).includes('ai/AI-DLC.md')) continue;
-  appendFileSync(p, (existsSync(p) ? '\n' : `# ${basename(TARGET)}\n`) + AGENTS_SECTION);
-  console.log(`pointed ${name} at the framework`);
+  if (existsSync(p) && read(p).includes(marker)) continue;
+  // an installed repo already points at the framework; the e2e layer adds nothing
+  if (profile === 'e2e' && installed) continue;
+  appendFileSync(p, (existsSync(p) ? '\n' : `# ${basename(TARGET)}\n`) + section);
+  console.log(`pointed ${name} at the ${profile === 'e2e' ? 'e2e layer' : 'framework'}`);
 }
 
 // ---- generate the editor surfaces and verify ----------------------------------
@@ -292,9 +413,29 @@ const run = (script, ...extra) =>
     stdio: 'inherit',
   });
 run('aidlc-build-surfaces.mjs');
-run('aidlc-check.mjs', '--write');
-run('aidlc-check.mjs');
+// A standalone QA repo has no validator by design — there is nothing here for it
+// to validate. An installed repo runs it, because the layer just added files.
+if (existsSync(join(TARGET, 'tools', 'aidlc-check.mjs'))) {
+  run('aidlc-check.mjs', '--write');
+  run('aidlc-check.mjs');
+}
 
+if (profile === 'e2e')
+  console.log(`
+E2E layer installed at ${E2E_ROOT}/ and verified.
+
+Three steps a script cannot do:
+
+1. Install Playwright: npm i -D @playwright/test && npx playwright install
+2. Point it at an app. Same repo: uncomment webServer in
+   ${E2E_ROOT}/playwright.config.ts and set the start command. Separate QA repo:
+   set E2E_BASE_URL to the deployed environment.
+3. Replace the sign-in selectors in ${E2E_ROOT}/src/seed.setup.ts with this
+   product's login screen, and set E2E_USER / E2E_PASSWORD for a seeded account.
+
+Then run /qa in any editor and say "generate e2e tests for US-###". The plan is
+reviewed before any test is generated from it.`);
+else
 console.log(
   update
     ? `

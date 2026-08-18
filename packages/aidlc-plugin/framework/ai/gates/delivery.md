@@ -15,6 +15,8 @@ Approved story (Gate 1 baseline)
    note / ADR-### into the same PR, before implementation
 → DEV persona implements; QA persona derives tests FROM THE STORY (before reading the diff):
    positive per AC, then negative, then boundary — test names cite US-###/AC-##
+→ [Browser-level criteria only] QA persona writes <e2e-root>/plans/US-###.md FIRST, the
+   human approves that plan, and only then are Playwright tests generated from it
 → Architect persona reviews the diff (advisory: findings rated, verdict suggested)
 → PR description: AC→evidence table, real command output, QA notes; manifest.json updated
 → Human reviews + merges in GitHub. Merged = delivered.
@@ -30,6 +32,8 @@ Everything for the story rides **one PR**: code, tests, ADR if any, manifest upd
 | Every AC in the manifest has a passing test citing `US-###/AC-##` in an active test title             | `aidlc-check`                                                  |
 | A story PR with no AC-citing tests at all fails — delivery is derived from the `feat/US-###-*` branch | `aidlc-check`                                                  |
 | Those tests actually assert the criterion (a citation alone is not proof)                             | Architect persona review + human review                        |
+| Browser-level criteria: the plan was reviewed before the tests were generated from it                 | Human review of the plan's own PR                              |
+| E2E tests in a **separate** QA repo cannot block this PR — their evidence file is validated when published, and its absence requires nothing | `aidlc-check` (check 15); blocking needs same-repo e2e |
 | IDs/links valid, manifest consistent (incl. NFR nodes), plugin payload undrifted                      | `aidlc-check`                                                  |
 | A Complex-tier change (contract, schema, or trust boundary) carries a design note written _before_ the code | Architect persona review + human review — tiers in [`context/task-classification.md`](../context/task-classification.md) |
 | Design fits, no security holes, code quality                                                          | Architect persona review (advisory) + human review (authority) |

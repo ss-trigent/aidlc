@@ -45,7 +45,7 @@ Optional companion: [mattpocock/skills](https://github.com/mattpocock/skills) �
 | --------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
 | `skills/`                         | 8 persona skills + `/aidlc-init` scaffolder              | **generated** — `tools/aidlc-build-plugin.mjs` |
 | `framework/ai/`                   | Charters, gates, templates, standards, interaction rules | **generated** — copied from this repo's `ai/`  |
-| `framework/tools/*.mjs`           | The policy-as-code CI validator, the persona-surface builder, the Jira boundary, and the deterministic scaffolder (`aidlc-scaffold.mjs`) | **generated** — copied from `tools/`           |
+| `framework/tools/*.mjs`           | The policy-as-code CI validator, the persona-surface builder, the Jira boundary, the cross-repo e2e evidence tool (`aidlc-qa-coverage.mjs`), and the deterministic scaffolder (`aidlc-scaffold.mjs`) | **generated** — copied from `tools/`           |
 | `framework/seed/`                 | Fresh-repo manifest skeleton + CI step snippet           | **generated**                                  |
 | `.claude-plugin/plugin.json`      | Plugin manifest                                          | hand-maintained                                |
 
@@ -53,7 +53,7 @@ Never hand-edit generated paths — change the sources in the repo root and run 
 
 ## Ownership after install
 
-The framework is a shared library. An adopting team owns — and freely edits — what `/aidlc-init` generates for it: `ai/standards/` (rewritten for their stack in the init interview, including `task-surfaces.md`, where they name the task-classification surfaces their codebase actually has), `ai/project-context.md`, `ai/templates/jira/`, the traceability manifest, and CI wiring. Everything else under `ai/` plus the `aidlc-*` tools is framework-owned: `ai/framework-lock.json` ships a SHA-256 per file and `aidlc-check` (check #14) fails the build on any edit or deletion until reverted — that includes the artifact templates (`brd.md`, `user-story.md`, `screen-spec.md`, `adr.md`, `pr-description.md`), whose shape is what traceability is validated against. Wanting a different gate rule is legitimate — it goes upstream as a `change-request` issue against this repo, never a local edit. Full configuration guide: [README §Configuring it for your team](../../README.md#configuring-it-for-your-team).
+The framework is a shared library. An adopting team owns — and freely edits — what `/aidlc-init` generates for it: `ai/standards/` (rewritten for their stack in the init interview, including `task-surfaces.md`, where they name the task-classification surfaces their codebase actually has), `ai/project-context.md`, `ai/templates/jira/`, the traceability manifest, and CI wiring. Everything else under `ai/` plus the `aidlc-*` tools is framework-owned: `ai/framework-lock.json` ships a SHA-256 per file and `aidlc-check` (check #14) fails the build on any edit or deletion until reverted — that includes the artifact templates (`brd.md`, `user-story.md`, `screen-spec.md`, `test-plan.md`, `adr.md`, `pr-description.md`), whose shape is what traceability is validated against. Wanting a different gate rule is legitimate — it goes upstream as a `change-request` issue against this repo, never a local edit. Full configuration guide: [README §Configuring it for your team](../../README.md#configuring-it-for-your-team).
 
 ## What makes it different from spec-kit / AWS aidlc-workflows
 

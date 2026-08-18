@@ -75,6 +75,13 @@ files.set(
   join('framework', 'tools', 'aidlc-jira.mjs'),
   read(join(REPO, 'tools', 'aidlc-jira.mjs')),
 );
+// aidlc-check imports this for check 15 (cross-repo e2e evidence), and a
+// standalone QA repo runs it to produce that evidence — so it ships with the
+// framework rather than beside it, same reason as aidlc-jira.
+files.set(
+  join('framework', 'tools', 'aidlc-qa-coverage.mjs'),
+  read(join(REPO, 'tools', 'aidlc-qa-coverage.mjs')),
+);
 // generates the Cursor/opencode/Copilot persona surfaces in adopting repos (ADR-005)
 files.set(
   join('framework', 'tools', 'aidlc-build-surfaces.mjs'),
@@ -226,7 +233,7 @@ In your editor, type the command for your role:
 /ux           screens, states, the design system
 /architect    system + DB design, ADRs, PR review
 /dev          implement one story as one PR
-/qa           tests derived from requirements, bug reports
+/qa           tests derived from requirements, browser tests, bug reports
 /devops       CI, releases, rollback
 /manager      status, routing, delivery plans
 \`\`\`
@@ -255,6 +262,7 @@ wrong assumption is cheap to catch in a plan and expensive to catch in a diff.
 | \`inception/design/\`       | Screen specs, design tokens, component previews             |
 | \`inception/architecture/\` | DB design + app architecture                                |
 | \`knowledge/\`              | Traceability manifest and architecture decisions (\`ADR-###\`) |
+| \`<e2e-root>/\`             | Browser tests, if this project installed them: reviewed plans + generated specs. Where it is comes from \`testDir\` in its \`playwright.config.ts\` |
 
 ## 5. The one rule worth memorising
 
@@ -274,6 +282,172 @@ files.set(
 # Make it a required status via branch protection — without that,
 # the framework is guidance, not governance.
 - run: node tools/aidlc-check.mjs
+`,
+);
+
+// ---- e2e layer seeds (aidlc-scaffold --profile e2e) -------------------------
+// Deliberately stack-neutral: no Nx, no framework-specific runner, and the only
+// external dependency is Playwright itself plus its MCP server — which every
+// harness consumes as configuration, so the layer works from Claude Code,
+// Cursor, opencode and Copilot alike. testDir is the ONLY record of where the
+// layer lives; nothing else stores that path, so nothing else can drift from it.
+files.set(
+  join('framework', 'seed', 'e2e', 'playwright.config.ts'),
+  `import { defineConfig, devices } from '@playwright/test';
+
+// The e2e root is wherever --root put this file. testDir is relative to it, and
+// it is the one place that records the layout — personas read it, humans edit it.
+export default defineConfig({
+  testDir: './src',
+  // The JSON report is what aidlc-qa-coverage.mjs reads to build AC evidence.
+  reporter: [['list'], ['json', { outputFile: 'playwright-report.json' }]],
+  // A red test is a finding (ai/standards/testing-standards.md): no retries
+  // locally, and one in CI only to distinguish infrastructure flake from a real
+  // failure — never to make a failing assertion eventually pass.
+  retries: process.env.CI ? 1 : 0,
+  forbidOnly: !!process.env.CI,
+  use: {
+    // Same repo: leave E2E_BASE_URL unset and let webServer below start the app.
+    // Separate QA repo: point it at the deployed environment under test.
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+  projects: [
+    { name: 'setup', testMatch: /seed\\.setup\\.ts/ },
+    {
+      name: 'chromium',
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+    },
+  ],
+  // Uncomment in a same-repo install so CI has an app to test. Replace the
+  // command with whatever starts THIS project — there is no default that is
+  // right for every stack.
+  // webServer: {
+  //   command: 'npm run start',
+  //   url: process.env.E2E_BASE_URL ?? 'http://localhost:4200',
+  //   reuseExistingServer: !process.env.CI,
+  // },
+});
+`,
+);
+files.set(
+  join('framework', 'seed', 'e2e', 'seed.setup.ts'),
+  `import { test as setup, expect } from '@playwright/test';
+
+// Deterministic tests need a known starting state (ai/standards/testing-standards.md).
+// This runs once before the suite and saves an authenticated session the specs
+// reuse, so no test carries login steps that are not part of its criterion.
+//
+// Credentials come from the environment. Nothing instance-specific is committed —
+// same rule the Jira integration follows.
+const FILE = '.auth/user.json';
+
+setup('authenticate', async ({ page }) => {
+  const email = process.env.E2E_USER;
+  const password = process.env.E2E_PASSWORD;
+  expect(
+    email && password,
+    'set E2E_USER and E2E_PASSWORD — a seeded account this suite may use',
+  ).toBeTruthy();
+
+  // Replace the selectors and the route with this product's sign-in screen.
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(email!);
+  await page.getByLabel('Password').fill(password!);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).not.toHaveURL(/\\/login/);
+
+  await page.context().storageState({ path: FILE });
+});
+`,
+);
+// One server, three config shapes — the harnesses genuinely disagree, and a
+// single blob copied to four paths would silently fail in two of them.
+// Claude Code and Cursor: `mcpServers`. VS Code / Copilot: `servers`. opencode:
+// `mcp` with a type and the command as an array.
+const PW_MCP = { command: 'npx', args: ['-y', '@playwright/mcp@latest'] };
+const json = (o) => `${JSON.stringify(o, null, 2)}\n`;
+files.set(
+  join('framework', 'seed', 'e2e', 'mcp-claude.json'),
+  json({ mcpServers: { playwright: PW_MCP } }),
+);
+files.set(
+  join('framework', 'seed', 'e2e', 'mcp-vscode.json'),
+  json({ servers: { playwright: PW_MCP } }),
+);
+files.set(
+  join('framework', 'seed', 'e2e', 'mcp-opencode.json'),
+  json({
+    $schema: 'https://opencode.ai/config.json',
+    mcp: {
+      playwright: {
+        type: 'local',
+        command: ['npx', '-y', '@playwright/mcp@latest'],
+        enabled: true,
+      },
+    },
+  }),
+);
+files.set(
+  join('framework', 'seed', 'e2e', 'plans-README.md'),
+  `# E2E test plans
+
+One plan per story, named after it: \`US-###.md\`. The story ID is the plan's
+identity — there is no separate plan ID to keep in sync.
+
+Format: [\`ai/templates/test-plan.md\`](../../ai/templates/test-plan.md). Steps are
+written so a human could execute them by hand, which is what makes a plan
+reviewable on its own and what lets generation produce a test without guessing
+intent.
+
+**The plan is reviewed before its tests are generated.** That review is the only
+cheap moment to catch a scenario that tests something adjacent to the acceptance
+criterion rather than the criterion itself.
+`,
+);
+files.set(
+  join('framework', 'seed', 'e2e', 'e2e-workflow.yml'),
+  `# Browser-level tests. In a same-repo install, make this a required status only
+# once the suite is stable — an e2e job that flakes teaches the team to re-run
+# rather than to read the failure.
+name: e2e
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+        env:
+          E2E_BASE_URL: \${{ vars.E2E_BASE_URL }}
+          E2E_USER: \${{ secrets.E2E_USER }}
+          E2E_PASSWORD: \${{ secrets.E2E_PASSWORD }}
+      # Separate QA repo only: turn the run into evidence the product repo can
+      # validate. Set PRODUCT_REPO as a repository variable to enable it. In a
+      # same-repo install it stays unset and this is skipped — there the spec path
+      # in the story's tests[] already carries the edge, and a second record of
+      # the same fact is a second thing to drift.
+      - if: always() && vars.PRODUCT_REPO != ''
+        run: node tools/aidlc-qa-coverage.mjs --repo "$GITHUB_REPOSITORY"
+        env:
+          PRODUCT_SHA: \${{ vars.PRODUCT_SHA }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report.json
+            e2e-coverage.json
+            playwright-report/
 `,
 );
 
@@ -316,7 +490,7 @@ You scaffold the AI-DLC framework from this plugin's bundled payload. The payloa
 ## Steps
 
 1. **Refuse-if-present check:** if \`ai/AI-DLC.md\` already exists, the framework is installed — this is an **upgrade**, not an install. Make sure the plugin itself is current first (\`/plugin\` → update \`aidlc@trigent-aidlc\`), then run \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs" . --update\` on a fresh branch. It refreshes every framework-owned file and **skips anything the team owns that already exists** — \`ai/standards/\`, \`ai/templates/jira/\`, \`ai/project-context.md\`, the traceability manifest, their CI workflow — printing what it kept. Then walk the human through \`git diff\` (what gate rules changed, and any new seed that landed because they did not have it yet) and leave it as a PR. Never blind-overwrite, never commit.
-2. **Run the scaffold:** \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs"\` — deterministic, no interview. It copies the framework (\`ai/\`, the validator, the Jira boundary, the surface builder), pins the persona skills and delegatable agents into \`.claude/\`, generates the Cursor (\`.cursor/\`), opencode (\`.opencode/\`) and GitHub Copilot (\`.github/\`) surfaces, seeds the traceability manifest and the artifact homes (including \`inception/architecture/README.md\` and \`inception/design/README.md\`, which define the format of the Architect's and UX's deliverables, plus a root \`ONBOARDING.md\`), points \`AGENTS.md\` at the framework, writes an \`aidlc-check\` CI workflow if the repo has none, and verifies with \`aidlc-check\`. It aborts (rather than overwrite) on any differing existing file. Tell the human: every teammate now runs the same repo-pinned persona version whatever they edit with — Claude Code reads \`.claude/\`, Cursor \`.cursor/\`, opencode \`.opencode/\`, Copilot \`.github/\` — enforced from now on by checks 10 and 13; teammates on other editors need nothing installed, and a team with no Claude Code at all runs this same script from a clone of the framework repo. (Claude Code users may also see this plugin's own copies of the persona skills — identical content; the repo copies are canonical for this project.)
+2. **Run the scaffold:** \`node "$CLAUDE_PLUGIN_ROOT/framework/tools/aidlc-scaffold.mjs"\` — deterministic, no interview. It copies the framework (\`ai/\`, the validator, the Jira boundary, the surface builder, the e2e evidence tool), pins the persona skills and delegatable agents into \`.claude/\`, generates the Cursor (\`.cursor/\`), opencode (\`.opencode/\`) and GitHub Copilot (\`.github/\`) surfaces, seeds the traceability manifest and the artifact homes (including \`inception/architecture/README.md\` and \`inception/design/README.md\`, which define the format of the Architect's and UX's deliverables, plus a root \`ONBOARDING.md\`), points \`AGENTS.md\` at the framework, writes an \`aidlc-check\` CI workflow if the repo has none, and verifies with \`aidlc-check\`. It aborts (rather than overwrite) on any differing existing file. Tell the human: every teammate now runs the same repo-pinned persona version whatever they edit with — Claude Code reads \`.claude/\`, Cursor \`.cursor/\`, opencode \`.opencode/\`, Copilot \`.github/\` — enforced from now on by checks 10 and 13; teammates on other editors need nothing installed, and a team with no Claude Code at all runs this same script from a clone of the framework repo. (Claude Code users may also see this plugin's own copies of the persona skills — identical content; the repo copies are canonical for this project.)
 3. **Tailor the project-owned files.** The payload's \`ai/standards/\` comes from the reference project (Nx + NestJS + Angular + TypeORM) — it is a seed for **form**, not content, and shipping it unchanged into a different stack would misdirect every persona. So:
    1. Detect the stack yourself before asking anything: package manager, language(s), frameworks, test runner, DB layer, monorepo tool — read \`package.json\`/lockfiles/configs; never ask what the repo already answers.
    2. Interview the human in plain language, one question at a time: what the product is (a short paragraph in their words), whatever detection could not settle, and conventions the team already has (commit style, API style, review habits). Existing conventions win over the seed's — the framework governs gates, not taste.
@@ -326,7 +500,8 @@ You scaffold the AI-DLC framework from this plugin's bundled payload. The payloa
    These files are **project-owned**: \`ai/framework-lock.json\` deliberately excludes \`ai/standards/\`, \`ai/templates/jira/\` and \`ai/project-context.md\`, and the team edits them freely from now on. Everything else under \`ai/\` is framework-owned and hash-verified by \`aidlc-check\` (check 14) — a local edit there fails CI; framework changes go upstream as a change-request.
 4. **Confirm CI is real:** the scaffold wrote \`.github/workflows/aidlc-check.yml\` if the repo had no workflow running the validator; if the repo already had workflows, help the human add the step from \`$CLAUDE_PLUGIN_ROOT/framework/seed/ci-step.yml\` after dependency install. Either way, explain that branch protection with this status as required is what makes the gates real — and that on private GitHub Free repos it needs Pro or a public repo. The design system is deliberately not seeded — tokens are grounded in the specific product, so \`/ux\` authors \`inception/design/tokens.css\` with the human on the first UI story, and \`aidlc-check --write\` then generates the \`tokens.json\` export their design tool imports.
 5. **Verify:** \`node tools/aidlc-check.mjs\` must exit green (warnings about empty scope are expected on a fresh install — the scaffold already ran it once; rerun after tailoring).
-6. **Hand off:** tell the human the gates in one sentence each and that the next step is \`/ba\` with their first customer need — and \`/ux\` once a story has UI. The personas now live in the repository (step 2), so they arrive with every clone; the plugin stays useful as the upgrade vehicle and for scaffolding the next repo.
+6. **Mention the optional browser-test layer, do not install it.** Nothing so far installs Playwright and no gate needs it. If the human asks for browser/UI testing (now or later), it is one command: \`node tools/aidlc-scaffold.mjs --profile e2e --root <dir>\` — \`--root\` is their choice, no layout is assumed, and \`testDir\` in the generated \`playwright.config.ts\` becomes the only record of it. It also writes the Playwright MCP config in all four harness shapes. QA who do not hold this repo run the same command in their own repo and publish evidence back as a PR — with the cost stated in [ADR-006](../knowledge/decisions/ADR-006-e2e-testing-layer.md): cross-repo e2e cannot block a story PR.
+7. **Hand off:** tell the human the gates in one sentence each and that the next step is \`/ba\` with their first customer need — and \`/ux\` once a story has UI. The personas now live in the repository (step 2), so they arrive with every clone; the plugin stays useful as the upgrade vehicle and for scaffolding the next repo.
 
 ## Never
 
