@@ -3,7 +3,8 @@
 One plan per story, named after it: `US-###.md`. The story ID is the plan's
 identity — there is no separate plan ID to keep in sync.
 
-Format: [`ai/templates/test-plan.md`](../../ai/templates/test-plan.md). Steps are
+Format: `ai/templates/test-plan.md`, from the repository root (this folder's
+depth depends on the `--root` the layer was installed to). Steps are
 written so a human could execute them by hand, which is what makes a plan
 reviewable on its own and what lets generation produce a test without guessing
 intent.

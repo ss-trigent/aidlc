@@ -397,7 +397,8 @@ files.set(
 One plan per story, named after it: \`US-###.md\`. The story ID is the plan's
 identity — there is no separate plan ID to keep in sync.
 
-Format: [\`ai/templates/test-plan.md\`](../../ai/templates/test-plan.md). Steps are
+Format: \`ai/templates/test-plan.md\`, from the repository root (this folder's
+depth depends on the \`--root\` the layer was installed to). Steps are
 written so a human could execute them by hand, which is what makes a plan
 reviewable on its own and what lets generation produce a test without guessing
 intent.
@@ -412,6 +413,10 @@ files.set(
   `# Browser-level tests. In a same-repo install, make this a required status only
 # once the suite is stable — an e2e job that flakes teaches the team to re-run
 # rather than to read the failure.
+#
+# __E2E_ROOT__ is replaced by aidlc-scaffold with the --root it installed to. The
+# config, its testDir and the JSON report all live under that root, while npm ci
+# belongs at the repository root — so the paths are explicit rather than a cwd.
 name: e2e
 on:
   pull_request:
@@ -426,7 +431,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test
+      - run: npx playwright test --config __E2E_ROOT__/playwright.config.ts
         env:
           E2E_BASE_URL: \${{ vars.E2E_BASE_URL }}
           E2E_USER: \${{ secrets.E2E_USER }}
@@ -437,7 +442,9 @@ jobs:
       # in the story's tests[] already carries the edge, and a second record of
       # the same fact is a second thing to drift.
       - if: always() && vars.PRODUCT_REPO != ''
-        run: node tools/aidlc-qa-coverage.mjs --repo "$GITHUB_REPOSITORY"
+        run: >
+          node tools/aidlc-qa-coverage.mjs --repo "$GITHUB_REPOSITORY"
+          --report __E2E_ROOT__/playwright-report.json
         env:
           PRODUCT_SHA: \${{ vars.PRODUCT_SHA }}
       - if: always()
@@ -445,9 +452,9 @@ jobs:
         with:
           name: playwright-report
           path: |
-            playwright-report.json
+            __E2E_ROOT__/playwright-report.json
+            test-results/
             e2e-coverage.json
-            playwright-report/
 `,
 );
 

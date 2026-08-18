@@ -98,6 +98,57 @@ test('--profile e2e installs the layer at --root and no gate machinery', () => {
   // testDir is the ONLY record of where the layer lives
   const pw = readFileSync(join(target, 'tests/browser/playwright.config.ts'), 'utf8');
   assert.match(pw, /testDir: '\.\/src'/);
+
+  // ...and the CI job must point at that root, or it runs nothing: the config,
+  // its testDir and the JSON report all live there, not at the repository root
+  const wf = readFileSync(join(target, '.github', 'workflows', 'e2e.yml'), 'utf8');
+  assert.ok(!wf.includes('__E2E_ROOT__'), 'the root placeholder was substituted');
+  assert.match(wf, /--config tests\/browser\/playwright\.config\.ts/);
+  assert.match(wf, /--report tests\/browser\/playwright-report\.json/);
+  assert.match(wf, /^\s+tests\/browser\/playwright-report\.json$/m, 'artifact path follows the root');
+});
+
+test('--profile e2e merges into an existing MCP config instead of replacing it', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-mcp-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  // what an adopting repo already has (ai/integrations.md names these two)
+  writeFileSync(
+    join(target, '.mcp.json'),
+    JSON.stringify({ mcpServers: { nx: { command: 'npx', args: ['nx-mcp'] } } }, null, 2),
+  );
+  writeFileSync(
+    join(target, 'opencode.json'),
+    JSON.stringify({ model: 'ours', mcp: { context7: { type: 'local', command: ['c7'] } } }, null, 2),
+  );
+
+  run(target, '--profile', 'e2e'); // must NOT abort on those two files
+
+  const cfg = (f) => JSON.parse(readFileSync(join(target, f), 'utf8'));
+  assert.ok(cfg('.mcp.json').mcpServers.nx, 'the team\'s server survived');
+  assert.ok(cfg('.mcp.json').mcpServers.playwright, 'playwright was added');
+  assert.ok(cfg('opencode.json').mcp.context7, 'the team\'s opencode server survived');
+  assert.ok(cfg('opencode.json').mcp.playwright, 'playwright was added');
+  assert.equal(cfg('opencode.json').model, 'ours', 'unrelated opencode config survived');
+});
+
+test('--profile e2e ignores the session credential where Playwright writes it', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-ignore-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  writeFileSync(join(target, '.gitignore'), 'node_modules\n');
+  run(target, '--profile', 'e2e', '--root', 'tests/browser');
+
+  // storageState and outputDir are CWD-relative (the reporter's outputFile is
+  // not), so a CI run from the repo root drops .auth/user.json THERE. The layer's
+  // own .gitignore cannot reach it, and it is a live session credential.
+  const rootIgnore = readFileSync(join(target, '.gitignore'), 'utf8');
+  assert.match(rootIgnore, /^node_modules$/m, "the team's own ignores survived");
+  for (const line of ['.auth/', 'test-results/'])
+    assert.match(rootIgnore, new RegExp(`^${line.replace('.', '\\.')}$`, 'm'), line);
+  const check = (cwd, p) =>
+    execFileSync('git', ['check-ignore', p], { cwd, encoding: 'utf8' }).trim();
+  assert.equal(check(target, '.auth/user.json'), '.auth/user.json');
+  // ...and still ignored for someone running the suite from inside the layer
+  assert.equal(check(target, 'tests/browser/.auth/user.json'), 'tests/browser/.auth/user.json');
 });
 
 test('--profile e2e adds only the layer to an installed repo', () => {

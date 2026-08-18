@@ -190,6 +190,10 @@ function walk(dir, acc = []) {
 // ---- plan every file write first, so collisions abort before any mutation ----
 const plan = new Map(); // target-relative path -> content
 const put = (rel, content) => plan.set(rel, content);
+// Paths written by merging into whatever is already there. Exempt from the
+// collision abort below, because adding one key to an existing config destroys
+// nothing — unlike the whole-file writes the abort exists to guard.
+const mergedPaths = new Set();
 const copyTree = (srcDir, destRel) => {
   for (const f of walk(srcDir)) put(join(destRel, relative(srcDir, f)), read(f));
 };
@@ -203,6 +207,55 @@ let hasCheckWorkflow = false;
 // of that is testDir in playwright.config.ts.
 const seedE2e = (name) =>
   read(join(PAYLOAD, 'framework', 'seed', 'e2e', name));
+/**
+ * Append ignore lines to the repository-root .gitignore, keeping whatever is
+ * already there. Appended rather than written for the same reason the MCP
+ * configs are merged: this file belongs to the team.
+ */
+const ignoreAtRoot = (lines) => {
+  const rel = '.gitignore';
+  const existing = existsSync(join(TARGET, rel)) ? read(join(TARGET, rel)) : '';
+  const have = new Set(existing.split('\n').map((l) => l.trim()));
+  const add = lines.filter((l) => !have.has(l));
+  if (!add.length) return;
+  mergedPaths.add(rel);
+  put(
+    rel,
+    `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${existing ? '\n' : ''}# Playwright run output and session state (AI-DLC e2e layer). These land in the\n# directory the suite is RUN from, not next to the config.\n${add.join('\n')}\n`,
+  );
+};
+
+/**
+ * Add the seed's MCP server to an existing harness config instead of replacing
+ * it. The container key differs per harness (mcpServers / servers / mcp), so it
+ * is read from the seed rather than hardcoded here.
+ */
+const mergeMcp = (rel, seedName) => {
+  const seed = JSON.parse(seedE2e(seedName));
+  const write = (obj) => {
+    mergedPaths.add(rel);
+    put(rel, `${JSON.stringify(obj, null, 2)}\n`);
+  };
+  const p = join(TARGET, rel);
+  if (!existsSync(p)) return write(seed);
+  let existing;
+  try {
+    existing = JSON.parse(read(p));
+  } catch {
+    // Someone's config with a comment or a trailing comma: refuse to guess at
+    // its shape, and say what to add rather than mangling it.
+    console.error(
+      `${rel} is not valid JSON — left untouched. Add the playwright MCP server to it by hand:\n${seedE2e(seedName)}`,
+    );
+    return;
+  }
+  const key = Object.keys(seed).find((k) => k !== '$schema');
+  write({
+    ...existing,
+    ...(seed.$schema && !existing.$schema ? { $schema: seed.$schema } : {}),
+    [key]: { ...(existing[key] ?? {}), ...seed[key] },
+  });
+};
 if (profile === 'e2e') {
   put(join(E2E_ROOT, 'playwright.config.ts'), seedE2e('playwright.config.ts'));
   put(join(E2E_ROOT, 'src', 'seed.setup.ts'), seedE2e('seed.setup.ts'));
@@ -210,16 +263,34 @@ if (profile === 'e2e') {
   put(
     join(E2E_ROOT, '.gitignore'),
     // Run output is evidence, not source. The auth state is a credential.
+    // Covers a run started from inside the layer; the root .gitignore below
+    // covers a run started from the repository root, which is what CI does.
     '.auth/\nplaywright-report.json\nplaywright-report/\ntest-results/\n',
   );
+  // Measured, not assumed: Playwright resolves the reporter's outputFile against
+  // the CONFIG directory, but storageState and outputDir against the CWD. So a CI
+  // run from the repository root drops .auth/user.json — a live session
+  // credential — and test-results/ at the root, where the layer's own .gitignore
+  // cannot see them. Ignore them where they actually land.
+  if (E2E_ROOT !== '.') ignoreAtRoot(['.auth/', 'test-results/', 'playwright-report/']);
   // One MCP server, four harness config paths, three different shapes — the
   // harnesses disagree, and half the team is on Cursor. This is the whole
   // harness-agnostic claim, so it is data, not a promise in a doc.
-  put('.mcp.json', seedE2e('mcp-claude.json')); // Claude Code
-  put(join('.cursor', 'mcp.json'), seedE2e('mcp-claude.json')); // Cursor
-  put(join('.vscode', 'mcp.json'), seedE2e('mcp-vscode.json')); // VS Code / Copilot
-  put('opencode.json', seedE2e('mcp-opencode.json')); // opencode
-  put(join('.github', 'workflows', 'e2e.yml'), seedE2e('e2e-workflow.yml'));
+  //
+  // These files are MERGED, never replaced: an adopting repo already configures
+  // MCP servers (ai/integrations.md names Nx and Context7), and writing the seed
+  // over the top would delete them. Only the playwright entry is added, so the
+  // collision guard below skips these paths — a merge cannot destroy work.
+  mergeMcp('.mcp.json', 'mcp-claude.json'); // Claude Code
+  mergeMcp(join('.cursor', 'mcp.json'), 'mcp-claude.json'); // Cursor
+  mergeMcp(join('.vscode', 'mcp.json'), 'mcp-vscode.json'); // VS Code / Copilot
+  mergeMcp('opencode.json', 'mcp-opencode.json'); // opencode
+  // The workflow's paths follow --root: the config, its testDir and the JSON
+  // report all live under the e2e root, while npm ci belongs at the repo root.
+  put(
+    join('.github', 'workflows', 'e2e.yml'),
+    seedE2e('e2e-workflow.yml').replaceAll('__E2E_ROOT__', E2E_ROOT),
+  );
 
   // A standalone QA repo has no framework: give it the one persona it needs and
   // nothing else. No aidlc-check, no gates, no inception/, no manifest — a QA
@@ -341,6 +412,7 @@ for (const rel of [...plan.keys()]) {
 
 const collisions = [];
 for (const [rel, content] of plan) {
+  if (mergedPaths.has(rel)) continue; // merged, not overwritten
   const p = join(TARGET, rel);
   if (existsSync(p) && read(p) !== content) collisions.push(rel);
 }
