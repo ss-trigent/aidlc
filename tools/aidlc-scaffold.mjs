@@ -260,19 +260,25 @@ if (profile === 'e2e') {
   put(join(E2E_ROOT, 'playwright.config.ts'), seedE2e('playwright.config.ts'));
   put(join(E2E_ROOT, 'src', 'seed.setup.ts'), seedE2e('seed.setup.ts'));
   put(join(E2E_ROOT, 'plans', 'README.md'), seedE2e('plans-README.md'));
-  put(
-    join(E2E_ROOT, '.gitignore'),
-    // Run output is evidence, not source. The auth state is a credential.
-    // Covers a run started from inside the layer; the root .gitignore below
-    // covers a run started from the repository root, which is what CI does.
-    '.auth/\nplaywright-report.json\nplaywright-report/\ntest-results/\n',
-  );
+  // Run output is evidence, not source. The auth state is a credential.
   // Measured, not assumed: Playwright resolves the reporter's outputFile against
   // the CONFIG directory, but storageState and outputDir against the CWD. So a CI
   // run from the repository root drops .auth/user.json — a live session
   // credential — and test-results/ at the root, where the layer's own .gitignore
-  // cannot see them. Ignore them where they actually land.
-  if (E2E_ROOT !== '.') ignoreAtRoot(['.auth/', 'test-results/', 'playwright-report/']);
+  // cannot see them. Ignore them where they actually land — and the repository
+  // root's .gitignore is ALWAYS merged, never written whole: it belongs to the
+  // team, and a --force whole-file write would un-ignore everything they listed.
+  if (E2E_ROOT === '.') {
+    ignoreAtRoot(['.auth/', 'playwright-report.json', 'playwright-report/', 'test-results/']);
+  } else {
+    put(
+      join(E2E_ROOT, '.gitignore'),
+      // covers a run started from inside the layer; the root merge below covers
+      // a run started from the repository root, which is what CI does
+      '.auth/\nplaywright-report.json\nplaywright-report/\ntest-results/\n',
+    );
+    ignoreAtRoot(['.auth/', 'test-results/', 'playwright-report/']);
+  }
   // One MCP server, four harness config paths, three different shapes — the
   // harnesses disagree, and half the team is on Cursor. This is the whole
   // harness-agnostic claim, so it is data, not a promise in a doc.
@@ -306,6 +312,20 @@ if (profile === 'e2e') {
     ])
       put(join('ai', f), read(join(PAYLOAD, 'framework', 'ai', f)));
     copyTree(join(PAYLOAD, 'skills', 'qa'), join('.claude', 'skills', 'qa'));
+    // The plugin wrapper's "stop and run /aidlc-init" banner points at machinery
+    // this profile deliberately does not install (and /aidlc-init is plugin-only
+    // besides) — strip it, or every /qa invocation in every surface built from
+    // this file tells the persona to halt.
+    const qaSkillRel = join('.claude', 'skills', 'qa', 'SKILL.md');
+    put(
+      qaSkillRel,
+      plan
+        .get(qaSkillRel)
+        .split('\n')
+        .filter((l) => !l.startsWith('> **Framework not installed?**'))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n'),
+    );
     put(
       join('.claude', 'agents', 'aidlc-qa.md'),
       read(join(PAYLOAD, 'agents', 'aidlc-qa.md')),
@@ -382,7 +402,11 @@ jobs:
   aidlc-check:
     runs-on: ubuntu-latest
     steps:
+      # Full history: the Gate D1 plan-tamper check verifies approved plan
+      # commits with \`git show\`, which a shallow clone can never reach.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -406,6 +430,18 @@ const TEAM_OWNED = [
   'inception' + sep, // artifact-home READMEs, rewritten per project
   'ONBOARDING.md',
 ];
+// The e2e layer's config is team-owned the moment it exists: testDir in
+// playwright.config.ts is the only record of where the tests live, and
+// seed.setup.ts carries this product's real sign-in selectors.
+if (profile === 'e2e') {
+  TEAM_OWNED.push(
+    join(E2E_ROOT, 'playwright.config.ts'),
+    join(E2E_ROOT, 'src', 'seed.setup.ts'),
+  );
+  // the layer's own .gitignore only: the repository root's is merged, and the
+  // merge result must not be pruned as "already exists"
+  if (E2E_ROOT !== '.') TEAM_OWNED.push(join(E2E_ROOT, '.gitignore'));
+}
 const preserved = [];
 for (const rel of [...plan.keys()]) {
   if (!existsSync(join(TARGET, rel))) continue;

@@ -189,3 +189,13 @@ test('aidlc-check rejects evidence citing a criterion the story does not define'
   });
   assert.match(out, /e2e-coverage\.json: US-003 has no AC-07/);
 });
+
+test('a test that never executed is not evidence', () => {
+  // an interrupted run (--max-failures, a crash) leaves results empty while
+  // Playwright's spec.ok stays true — that must not become a verified pass
+  const doc = coverageFromReport(
+    report({ ...spec('renders the route (US-003/AC-01)'), tests: [{ results: [] }] }),
+    META,
+  );
+  assert.deepEqual(doc.results, []);
+});

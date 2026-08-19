@@ -83,6 +83,14 @@ test('--profile e2e installs the layer at --root and no gate machinery', () => {
   // a standalone QA repo gets the one persona it needs, on every harness...
   assert.ok(existsSync(join(target, 'ai', 'templates', 'test-plan.md')));
   assert.ok(existsSync(join(target, '.claude', 'skills', 'qa', 'SKILL.md')));
+  // ...without the plugin wrapper's "stop and run /aidlc-init" banner: that
+  // points at machinery this profile deliberately does not install
+  assert.ok(
+    !readFileSync(join(target, '.claude', 'skills', 'qa', 'SKILL.md'), 'utf8').includes(
+      'Framework not installed',
+    ),
+    'no stop-banner in a repo the framework never installs to',
+  );
   assert.ok(existsSync(join(target, '.cursor', 'commands', 'qa.md')), 'Cursor surface generated');
   assert.ok(existsSync(join(target, '.opencode', 'commands', 'qa.md')), 'opencode surface generated');
   assert.ok(existsSync(join(target, '.github', 'prompts', 'qa.prompt.md')), 'Copilot surface generated');
@@ -186,4 +194,42 @@ test('scaffold seeds the development spec home', () => {
     'utf8',
   );
   assert.match(log, /Simple tier/);
+
+  // the seeded CI fetches full history: the Gate D1 plan-tamper check verifies
+  // approved plan commits with `git show`, which a shallow clone cannot reach
+  const wf = readFileSync(join(target, '.github', 'workflows', 'aidlc-check.yml'), 'utf8');
+  assert.match(wf, /fetch-depth: 0/);
+});
+
+test('--profile e2e at the repository root merges .gitignore, never replaces it', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-root-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  writeFileSync(join(target, '.gitignore'), 'node_modules\n.env\n');
+  run(target, '--profile', 'e2e', '--root', '.');
+
+  const ig = readFileSync(join(target, '.gitignore'), 'utf8');
+  assert.match(ig, /^node_modules$/m, "the team's ignores survived");
+  assert.match(ig, /^\.env$/m);
+  for (const line of ['.auth/', 'playwright-report.json', 'test-results/'])
+    assert.match(ig, new RegExp(`^${line.replace(/[.]/g, '\\.')}$`, 'm'), line);
+  assert.ok(existsSync(join(target, 'playwright.config.ts')), 'config landed at the root');
+});
+
+test('a --profile e2e rerun preserves the config and setup the team edited', () => {
+  // testDir in the config is the only record of where the tests live, and
+  // seed.setup.ts carries the product's real sign-in selectors — a rerun
+  // (say, after a framework upgrade) must not reset either or demand --force
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-rerun-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  run(target, '--profile', 'e2e', '--root', 'tests/browser');
+
+  const cfg = join(target, 'tests', 'browser', 'playwright.config.ts');
+  const setup = join(target, 'tests', 'browser', 'src', 'seed.setup.ts');
+  writeFileSync(cfg, '// ours: testDir moved\n');
+  writeFileSync(setup, '// ours: real selectors\n');
+
+  run(target, '--profile', 'e2e', '--root', 'tests/browser'); // must not abort
+
+  assert.equal(readFileSync(cfg, 'utf8'), '// ours: testDir moved\n');
+  assert.equal(readFileSync(setup, 'utf8'), '// ours: real selectors\n');
 });

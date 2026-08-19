@@ -516,7 +516,9 @@ if (manifest) {
       .toString()
       .split('\0')
       .filter((p) => p && isProductSpec(p))
-      .map((p) => join(REPO, p));
+      .map((p) => join(REPO, p))
+      // the index also lists tracked files deleted from the working tree
+      .filter((p) => existsSync(p));
   } catch {
     // not a git checkout (a scaffold run before `git init`) — walk instead
     specs = walk(REPO, (p) => isProductSpec(rel(p)));
@@ -959,11 +961,12 @@ if (existsSync(SPECS_DIR)) {
     ? read(join(SPECS_DIR, 'index.md'))
     : '';
   // `| FR-01 | ...` — the ID in the first cell of a table row, the same shape
-  // check 1 uses for REQ/NFR/RISK rows in inception/product.
+  // check 1 uses for REQ/NFR/RISK rows in inception/product. Any digit width:
+  // a spec written FR-1 or FR-100 must be traced, not silently exempted.
   const rowIds = (text, kinds) => {
     const ids = new Set();
     for (const line of text.split('\n')) {
-      const m = line.match(new RegExp(`^\\|\\s*((?:${kinds})-\\d{2})\\s*\\|`));
+      const m = line.match(new RegExp(`^\\|\\s*((?:${kinds})-\\d+)\\s*\\|`));
       if (m) ids.add(m[1]);
     }
     return ids;
@@ -979,6 +982,21 @@ if (existsSync(SPECS_DIR)) {
       return false;
     }
   };
+  // A shallow clone genuinely cannot see an old commit; a full clone that cannot
+  // see it is looking at an approval that never happened here.
+  const shallowRepo = (() => {
+    try {
+      return (
+        execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+          cwd: REPO,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim() === 'true'
+      );
+    } catch {
+      return true; // not a git checkout — cannot verify either way, stay a warning
+    }
+  })();
 
   for (const name of readdirSync(SPECS_DIR)) {
     const pkgDir = join(SPECS_DIR, name);
@@ -1008,14 +1026,20 @@ if (existsSync(SPECS_DIR)) {
           `${at} ${id} is in spec.md but not in traceability.md — every requirement gets a row, even one with status "not started"`,
         );
 
-    // 2. every path cited in traceability.md resolves
-    for (const m of traceText.matchAll(/`([^`\s]+\.[a-z0-9]+)`/gi)) {
-      const cited = m[1];
-      if (cited.startsWith('http') || !cited.includes('/')) continue;
-      if (!existsSync(join(REPO, cited)))
-        err(
-          `${at} traceability.md cites \`${cited}\` which does not exist — a table pointing at a deleted file is a lie, not a record`,
-        );
+    // 2. every path cited in the traceability TABLE resolves. Table rows only:
+    // prose (and a freshly copied template) legitimately mentions paths that are
+    // not claims — `path/to/f.ts` placeholders and globs are not claims either.
+    for (const line of traceText.split('\n')) {
+      if (!line.trimStart().startsWith('|')) continue;
+      for (const m of line.matchAll(/`([^`\s]+\.[a-z0-9]+)`/gi)) {
+        const cited = m[1];
+        if (cited.startsWith('http') || !cited.includes('/')) continue;
+        if (cited.includes('*') || cited.startsWith('path/to/')) continue;
+        if (!existsSync(join(REPO, cited)))
+          err(
+            `${at} traceability.md cites \`${cited}\` which does not exist — a table pointing at a deleted file is a lie, not a record`,
+          );
+      }
     }
 
     // 3. every US/AC cited in spec.md resolves
@@ -1027,15 +1051,19 @@ if (existsSync(SPECS_DIR)) {
           `${at} spec.md cites ${us} which is not a story in inception/stories/user-stories/`,
         );
     }
+    // A bare AC-## is a claim about this package's own story; a qualified
+    // US-###/AC-## is a claim about that story — each is checked against the
+    // story it actually names (same pair format qa-coverage's CITATION parses).
     const storyOfPkg = name.match(/^US-\d{3}/)?.[0];
-    if (storyOfPkg && storyAcs.has(storyOfPkg)) {
-      const acs = storyAcs.get(storyOfPkg);
-      for (const ac of new Set(
-        [...specText.matchAll(/\bAC-\d{2}\b/g)].map((x) => x[0]),
-      )) {
-        if (!acs.has(ac))
-          err(`${at} spec.md cites ${ac} which ${storyOfPkg} does not define`);
-      }
+    const seenAc = new Set();
+    for (const m of specText.matchAll(/(?:(US-\d{3})\/)?\b(AC-\d{2})\b/g)) {
+      const owner = m[1] ?? storyOfPkg;
+      if (!owner || !storyAcs.has(owner)) continue; // unknown US already erred above
+      const key = `${owner}/${m[2]}`;
+      if (seenAc.has(key)) continue;
+      seenAc.add(key);
+      if (!storyAcs.get(owner).has(m[2]))
+        err(`${at} spec.md cites ${m[2]} which ${owner} does not define`);
     }
 
     // 4. the package has a row in the index
@@ -1044,16 +1072,36 @@ if (existsSync(SPECS_DIR)) {
         `${at} no row in inception/specs/index.md — the catalog is how the next developer finds an existing package instead of writing a second one`,
       );
 
-    // 5-6. the Gate D1 approval block, when the plan carries one
+    // 5-6. the Gate D1 approval block, when the plan carries one. A near-miss —
+    // a heading or Status cell that ALMOST matches — is an error, not a skip: a
+    // gate that silently disables itself on a hand-edit is no gate.
     const planPath = join(pkgDir, 'implementation-plan.md');
     if (!existsSync(planPath)) continue;
     const planText = read(planPath);
-    if (!/^##\s+Approval\s+—\s+Gate D1/m.test(planText)) continue;
+    const APPROVAL_HEAD = /^##\s+Approval\s+—\s+Gate D1\s*$/m;
+    if (!APPROVAL_HEAD.test(planText)) {
+      if (/^##.*\bapproval\b.*gate\s*d1/im.test(planText))
+        err(
+          `${at} implementation-plan.md has an approval-like heading that is not exactly "## Approval — Gate D1" (em dash) — the audit cannot see it, fix the heading`,
+        );
+      continue;
+    }
+    // Fields come from the approval section only — a "| Status |" cell in some
+    // earlier step table must not stand in for the approval's.
+    const section =
+      planText.split(/^(?=##\s)/m).find((s) => APPROVAL_HEAD.test(s)) ?? '';
     const field = (label) =>
-      planText.match(
+      section.match(
         new RegExp(`^\\|\\s*${label}\\s*\\|\\s*(.+?)\\s*\\|`, 'm'),
       )?.[1] ?? '';
-    if (!/^approved$/i.test(field('Status'))) continue;
+    const status = field('Status');
+    if (!/^approved$/i.test(status)) {
+      if (/^approved\b/i.test(status))
+        err(
+          `${at} implementation-plan.md approval Status "${status}" is not exactly "approved" — a decorated cell disables the audit, so it is an error`,
+        );
+      continue;
+    }
     const by = field('Approved by');
     const on = field('Approved on');
     const sha = field('Plan commit approved');
@@ -1070,9 +1118,12 @@ if (existsSync(SPECS_DIR)) {
         `${at} implementation-plan.md approval records no plan commit — that SHA is what makes the approval verifiable`,
       );
     } else if (!reachableSha(sha)) {
-      warn(
-        `${at} approved plan commit ${sha} is not reachable here (shallow clone?) — cannot verify the plan is unchanged since approval`,
-      );
+      // Fail closed on a full clone: there, an unreachable SHA is an approval
+      // this repository never saw. CI fetches full history (fetch-depth: 0)
+      // precisely so this branch can be an error rather than a shrug.
+      const msg = `${at} approved plan commit ${sha} is not reachable here — cannot verify the plan is unchanged since approval`;
+      if (shallowRepo) warn(`${msg} (shallow clone — fetch full history to verify)`);
+      else err(msg);
     } else {
       let approvedPlan = '';
       try {
@@ -1097,12 +1148,15 @@ if (existsSync(SPECS_DIR)) {
           .join('');
       if (approvedPlan && strip(approvedPlan) !== strip(planText)) {
         const logPath = join(pkgDir, 'change-log.md');
-        if (
-          !existsSync(logPath) ||
-          !/^\|\s*\d{4}-\d{2}-\d{2}/m.test(read(logPath))
-        )
+        const logText = existsSync(logPath) ? read(logPath) : '';
+        // Only a row dated on/after the approval covers a post-approval edit —
+        // one old row must not license every future edit.
+        const logged = [
+          ...logText.matchAll(/^\|\s*(\d{4}-\d{2}-\d{2})/gm),
+        ].some((x) => x[1] >= on);
+        if (!logged)
           err(
-            `${at} implementation-plan.md changed after its Gate D1 approval (${sha}) with no dated row in change-log.md — see it with: git diff ${sha} -- ${rel(planPath)}`,
+            `${at} implementation-plan.md changed after its Gate D1 approval (${sha}) with no change-log.md row dated ${on} or later — see it with: git diff ${sha} -- ${rel(planPath)}`,
           );
       }
     }

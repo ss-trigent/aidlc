@@ -13,6 +13,7 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
+  rmSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -103,4 +104,14 @@ test('check 5 ignores specs git does not track', () => {
   });
   const out = runCheck(dir);
   assert.doesNotMatch(out, /US-003-route\.spec\.ts cites US-003/);
+});
+
+test('check 5 survives a tracked spec deleted from the working tree', () => {
+  // `git ls-files` reads the index, which still lists a file removed with plain
+  // `rm` — the validator must skip it, not die on ENOENT mid-run
+  const dir = fixture({ specPath: 'e2e/src/US-003-route.spec.ts', listed: true });
+  rmSync(join(dir, 'e2e/src/US-003-route.spec.ts'));
+  const out = runCheck(dir);
+  assert.doesNotMatch(out, /ENOENT/);
+  assert.match(out, /aidlc-check: /, 'the run finished and reported');
 });

@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
 const SCAFFOLD = join(REPO, 'tools', 'aidlc-scaffold.mjs');
@@ -208,13 +208,116 @@ test('check 16 accepts a post-approval plan edit that IS logged', () => {
   assert.doesNotMatch(out, /changed after its Gate D1 approval/);
 });
 
-test('check 16 warns rather than fails when the approved SHA is unreachable', () => {
+test('check 16 fails a full clone whose approved SHA is unreachable', () => {
+  // in a full clone an unreachable SHA is an approval this repo never saw —
+  // warning here was the hole that let a fabricated stamp merge green
   const { dir, plan } = approvedFixture();
   writeFileSync(
     plan,
     readFileSync(plan, 'utf8').replace(/\| Plan commit approved \| \w+ \|/, '| Plan commit approved | abcdef1234 |'),
   );
   const out = runCheck(dir);
-  assert.match(out, /warn: .*approved plan commit abcdef1234 is not reachable/);
-  assert.doesNotMatch(out, /ERROR: .*US-007-export.*changed after/);
+  assert.match(out, /ERROR: .*approved plan commit abcdef1234 is not reachable/);
+});
+
+test('check 16 only warns when a SHALLOW clone cannot reach the approved SHA', () => {
+  const { dir } = approvedFixture();
+  const shallow = join(mkdtempSync(join(tmpdir(), 'aidlc-check16-shallow-')), 'r');
+  execFileSync('git', [
+    'clone', '-q', '--depth', '1', pathToFileURL(dir).href, shallow,
+  ]);
+  const out = runCheck(shallow);
+  assert.match(out, /warn: .*approved plan commit \w+ is not reachable .*shallow/);
+  assert.doesNotMatch(out, /ERROR: .*is not reachable/);
+});
+
+test('check 16 fails an approval heading that almost matches', () => {
+  // a hyphen where the em dash belongs must not silently disable the audit
+  const dir = fixture();
+  writeFileSync(
+    join(dir, 'inception', 'specs', 'US-007-export', 'implementation-plan.md'),
+    '# US-007 — implementation plan\n\n## Approval - Gate D1\n\n| Field | Value |\n| --- | --- |\n| Status | approved |\n',
+  );
+  const out = runCheck(dir);
+  assert.match(out, /US-007-export.*approval-like heading that is not exactly/);
+});
+
+test('check 16 fails a decorated Status cell instead of skipping the audit', () => {
+  const dir = fixture();
+  writeFileSync(
+    join(dir, 'inception', 'specs', 'US-007-export', 'implementation-plan.md'),
+    '# US-007 — implementation plan\n\n## Approval — Gate D1\n\n| Field | Value |\n| --- | --- |\n| Status | Approved ✅ |\n',
+  );
+  const out = runCheck(dir);
+  assert.match(out, /US-007-export.*not exactly "approved"/);
+});
+
+test('check 16 reads Status from the approval section, not the first table that has one', () => {
+  // an earlier step table's "| Status | approved |" must not impersonate the gate
+  const dir = fixture();
+  writeFileSync(
+    join(dir, 'inception', 'specs', 'US-007-export', 'implementation-plan.md'),
+    '# US-007 — implementation plan\n\n## Steps\n\n| Field | Value |\n| --- | --- |\n| Status | approved |\n\n' +
+      '## Approval — Gate D1\n\n| Field | Value |\n| --- | --- |\n| Status | awaiting review |\n| Approved by | — |\n',
+  );
+  const out = runCheck(dir);
+  assert.doesNotMatch(out, /names no approver/);
+});
+
+test('check 16 rejects a post-approval edit logged only by a pre-approval row', () => {
+  // one old change-log row must not license every future edit
+  const { dir, plan } = approvedFixture();
+  writeFileSync(
+    plan,
+    readFileSync(plan, 'utf8').replace('Write the CSV writer.', 'Write the CSV writer and a new endpoint.'),
+  );
+  writeFileSync(
+    join(dir, 'inception', 'specs', 'US-007-export', 'change-log.md'),
+    '# US-007 — change log\n\n| Date | Change | Why | Requirements affected |\n| --- | --- | --- | --- |\n' +
+      '| 2026-01-01 | Initial plan | — | — |\n',
+  );
+  const out = runCheck(dir);
+  assert.match(out, /changed after its Gate D1 approval/);
+});
+
+test('check 16 traces requirement IDs of any digit width', () => {
+  // FR-9 (or FR-100) must be held to the same rule as FR-09, not exempted
+  const dir = fixture();
+  const spec = join(dir, 'inception', 'specs', 'US-007-export', 'spec.md');
+  writeFileSync(
+    spec,
+    readFileSync(spec, 'utf8').replace('| FR-02 | Names the file', '| FR-9 | Names the file'),
+  );
+  const out = runCheck(dir);
+  assert.match(out, /US-007-export.*FR-9 is in spec\.md but not in traceability\.md/);
+});
+
+test('check 16 checks a qualified AC citation against the story it names', () => {
+  const dir = fixture();
+  writeFileSync(
+    join(dir, 'inception', 'stories', 'user-stories', 'US-008-import.md'),
+    '# US-008 — Import\n\n## Acceptance criteria\n\n### AC-03 Imports a file\n\nIt imports.\n',
+  );
+  const spec = join(dir, 'inception', 'specs', 'US-007-export', 'spec.md');
+  writeFileSync(
+    spec,
+    readFileSync(spec, 'utf8') +
+      '\nOut of scope: import is covered by US-008/AC-03. A wrong claim: US-008/AC-09.\n',
+  );
+  const out = runCheck(dir);
+  assert.doesNotMatch(out, /AC-03 which US-00\d does not define/, 'truthful cross-story cite passes');
+  assert.match(out, /AC-09 which US-008 does not define/, 'wrong cross-story cite is caught');
+});
+
+test('check 16 lets placeholders, globs and prose paths be', () => {
+  const dir = fixture();
+  const tr = join(dir, 'inception', 'specs', 'US-007-export', 'traceability.md');
+  writeFileSync(
+    tr,
+    readFileSync(tr, 'utf8') +
+      '| FR-02 | `path/to/file.ts` | `x` | `apps/**/*.spec.ts` | not started |\n' +
+      '\nThis package replaces `src/old/parser.ts` (deleted with US-006).\n',
+  );
+  const out = runCheck(dir);
+  assert.doesNotMatch(out, /does not exist/);
 });

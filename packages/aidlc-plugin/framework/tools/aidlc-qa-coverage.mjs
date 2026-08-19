@@ -44,7 +44,9 @@ export function coverageFromReport(
       const ran = statuses(spec);
       // A skipped test is not proof (ai/standards/testing-standards.md), so it is
       // absent from the evidence rather than present as a weaker kind of pass.
-      if (ran.length && ran.every((s) => s === 'skipped')) continue;
+      // Neither is a test with no results at all (interrupted run, --max-failures):
+      // Playwright's spec.ok is true for a test that never executed.
+      if (!ran.length || ran.every((s) => s === 'skipped')) continue;
       results.push({
         story: m[1],
         ac: m[2],

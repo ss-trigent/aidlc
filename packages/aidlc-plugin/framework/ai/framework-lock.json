@@ -36,9 +36,9 @@
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
     "tools/aidlc-build-plugin.mjs": "152ac72fbdf3072c9adb47c865679f68900cd2b2ca0c4657e4ae893ef545bc57",
     "tools/aidlc-build-surfaces.mjs": "1376704de21270da86fd58ae52883be243f29859094b284cec041d7a8ee975a2",
-    "tools/aidlc-check.mjs": "b206912d7b758a7703e06900ce9d6c4062fb67fbe859bde7f6bf13250b88b18a",
+    "tools/aidlc-check.mjs": "cbd361df5de57c0c220c971531d10eace7542df94a5fca35d27086939610f9d5",
     "tools/aidlc-jira.mjs": "18e35990b478be478412e59a8d9e77fda37a356bfb86ff9c2a113b93c8a99215",
-    "tools/aidlc-qa-coverage.mjs": "fee807070cbaec4a45bbeaa6709d13b6e4ac58ab825ae0b71bc0e3fe0a291b39",
-    "tools/aidlc-scaffold.mjs": "9f787aa33540f23c24168ad58e23d1bf5881f25e661471c33157978dbba9df27"
+    "tools/aidlc-qa-coverage.mjs": "0624ad0a67948e3935dcfc7c739518f7780a3b4b212df88e8d1810e2642cc185",
+    "tools/aidlc-scaffold.mjs": "f7abac8100c24221be4107b52984eb168344309168eeac7c5168f9b995d3e2cb"
   }
 }
