@@ -19,7 +19,16 @@ const CHECK = join(REPO, 'tools', 'aidlc-check.mjs');
 
 function runCheck(cwd) {
   try {
-    return execFileSync(process.execPath, [CHECK], { cwd, encoding: 'utf8' });
+    // GITHUB_HEAD_REF is scrubbed on purpose. The validator prefers it over the
+    // checked-out branch — correct on a real PR, wrong here: the child would
+    // inherit THIS repo's PR branch and derive delivery state from it instead of
+    // from the fixture's branch, so any assertion about a story being in
+    // delivery would pass locally and fail in CI.
+    return execFileSync(process.execPath, [CHECK], {
+      cwd,
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_HEAD_REF: '' },
+    });
   } catch (e) {
     return `${e.stdout ?? ''}${e.stderr ?? ''}`;
   }
