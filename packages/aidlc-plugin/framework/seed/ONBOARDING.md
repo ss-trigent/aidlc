@@ -1,8 +1,8 @@
 # Onboarding
 
 About 15 minutes, whatever your role. This repository runs **AI-DLC**: you work
-with an AI persona for your role, and every approval is a GitHub pull-request
-review — never chat text.
+with an AI persona for your role, and approvals are GitHub pull-request reviews
+rather than chat text — with one exception, called out below.
 
 ## 1. The shortest possible version
 
@@ -44,12 +44,35 @@ The persona interviews you in plain language. You do **not** need to know the
 framework, the file layout, or git to use it. If one starts talking in paths and
 IDs, tell it to explain in plain words — that is in its charter.
 
-## 3. What to expect the first time you build something
+## 3. What building something actually looks like
 
-Before writing code, the DEV persona classifies the task and shows you a plan —
-what it will change, what it verified by reading the code, and what it still
-needs to ask. It stops there until you reply `go`. That pause is the point: a
-wrong assumption is cheap to catch in a plan and expensive to catch in a diff.
+A story is approved and it is yours. You type `/dev` and name it. From there:
+
+| #   | Who     | What happens                                                                                                                              |
+| --- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | AI      | Reads the story, sizes the task, verifies what it can by reading your code, and **asks** about anything it cannot verify                    |
+| 2   | AI      | Writes a spec package into `inception/specs/US-###-<slug>/` — the technical requirements, an ordered implementation plan, and what the change will touch |
+| 3   | **You** | **Gate D1.** Read `implementation-plan.md` and `impact-analysis.md`. Reply `go`, or say what is wrong. Any open question is answered first |
+| 4   | AI      | Writes your name, the date, and the exact version you approved into the plan                                                                |
+| 5   | AI      | Implements it — a failing test per acceptance criterion first, then the code that turns it green                                            |
+| 6   | AI      | Records where each requirement landed, and pastes real command output into the pull request                                                 |
+| 7   | **You** | **Gate D2.** Review the PR in GitHub, run anything that has to be checked by hand, merge                                                    |
+
+**Two decisions, both yours: the plan, then the merge.** Everything between them
+the AI owes you without asking again.
+
+Why the plan is reviewed first: a wrong assumption costs a sentence to fix in a
+plan and a rewrite to fix in a diff. Step 4 exists so that pause leaves a trace
+— if the plan changes after you approved it, CI fails the PR unless the change
+was written down.
+
+**A one-line fix does not get all of this.** For a docs edit or a string change
+you get the sizing and a `go`, nothing more. The bigger the surface the task
+crosses — a new endpoint, a schema change, anything touching auth — the more of
+the package it writes. It says which size it picked and why, so you can argue.
+
+**Changed your mind, or the work grew?** Say so. It stops, re-presents, and waits
+for a fresh `go` rather than quietly widening the diff.
 
 ## 4. Where things live
 
@@ -60,6 +83,7 @@ wrong assumption is cheap to catch in a plan and expensive to catch in a diff.
 | `inception/stories/`      | Stories (`US-###`) and their numbered acceptance criteria    |
 | `inception/design/`       | Screen specs, design tokens, component previews             |
 | `inception/architecture/` | DB design + app architecture                                |
+| `inception/specs/`        | One folder per story being built: technical requirements, the approved plan, impact, decisions, traceability |
 | `knowledge/`              | Traceability manifest and architecture decisions (`ADR-###`) |
 | `<e2e-root>/`             | Browser tests, if this project installed them: reviewed plans + generated specs. Where it is comes from `testDir` in its `playwright.config.ts` |
 

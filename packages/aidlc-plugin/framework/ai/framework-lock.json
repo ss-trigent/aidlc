@@ -34,7 +34,7 @@
     "ai/templates/test-cases.md": "d4408b0653c400bca71e6720e6b5dfc8f4d3a6a6583b5807ede8db108de86448",
     "ai/templates/test-plan.md": "d4200707539d8a9ffc9ac0055a8d5279724984a530a3f74c3fec05d55b356a41",
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
-    "tools/aidlc-build-plugin.mjs": "de5284e471d7a4e2fa26a61c57de32c73882b52b2b424965ea07a8a504440aee",
+    "tools/aidlc-build-plugin.mjs": "152ac72fbdf3072c9adb47c865679f68900cd2b2ca0c4657e4ae893ef545bc57",
     "tools/aidlc-build-surfaces.mjs": "1376704de21270da86fd58ae52883be243f29859094b284cec041d7a8ee975a2",
     "tools/aidlc-check.mjs": "2b25132759b4f3b481c5804284ae1f720fca7aa3629dead95cb67efead0c3073",
     "tools/aidlc-jira.mjs": "18e35990b478be478412e59a8d9e77fda37a356bfb86ff9c2a113b93c8a99215",
