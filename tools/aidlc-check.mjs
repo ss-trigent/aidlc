@@ -1056,6 +1056,20 @@ if (existsSync(SPECS_DIR)) {
         err(`${at} spec.md cites ${m[2]} which ${owner} does not define`);
     }
 
+    // Jira is a mirror, never load-bearing (ADR-002): where the integration is
+    // installed, a spec package whose story carries no ticket key gets a
+    // warning — a client following the board cannot see this work — and never
+    // an error: Jira going away must not break the build.
+    const storyEntry = storyOfPkg && manifest?.stories?.[storyOfPkg];
+    if (
+      existsSync(join(REPO, 'ai', 'templates', 'jira')) &&
+      storyEntry &&
+      !storyEntry.jira
+    )
+      warn(
+        `${at} ${storyOfPkg} has no jira key in the manifest — a client following the board cannot see this work`,
+      );
+
     // 4. the package has a row in the index
     if (!indexText.includes(name))
       err(

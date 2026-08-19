@@ -321,3 +321,17 @@ test('check 16 lets placeholders, globs and prose paths be', () => {
   const out = runCheck(dir);
   assert.doesNotMatch(out, /does not exist/);
 });
+
+test('check 16 warns when a spec package story has no jira key, and stays quiet with one', () => {
+  // ADR-002: Jira is a mirror — a missing key is visible on every run, never fatal
+  const dir = fixture();
+  const manifestPath = join(dir, 'knowledge', 'traceability', 'manifest.json');
+  const m = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  m.stories['US-007'] = { requirements: [], acs: ['AC-01'], tests: ['src/a.spec.ts'] };
+  writeFileSync(manifestPath, `${JSON.stringify(m, null, 2)}\n`);
+  assert.match(runCheck(dir), /warn: .*US-007 has no jira key/);
+
+  m.stories['US-007'].jira = 'LOG-142';
+  writeFileSync(manifestPath, `${JSON.stringify(m, null, 2)}\n`);
+  assert.doesNotMatch(runCheck(dir), /has no jira key/);
+});

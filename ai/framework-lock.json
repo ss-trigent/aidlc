@@ -36,7 +36,7 @@
     "ai/templates/user-story.md": "63d74a78f61a9b4b35f92c111227d26f83132517474557dd3319aa973c146fd6",
     "tools/aidlc-build-plugin.mjs": "152ac72fbdf3072c9adb47c865679f68900cd2b2ca0c4657e4ae893ef545bc57",
     "tools/aidlc-build-surfaces.mjs": "1156b000459f3f8c4a57f4a0580f9839d28dd8393b5d59ccd157d9971cc28bac",
-    "tools/aidlc-check.mjs": "647abb8104da10b1930ca906169b1a0c6f8b5aa0f88be0c0b6fefc6138bb2825",
+    "tools/aidlc-check.mjs": "9b62805351649dcb3d7650845cbf640d63899ff29ca3f5ff687266d204df238b",
     "tools/aidlc-jira.mjs": "18e35990b478be478412e59a8d9e77fda37a356bfb86ff9c2a113b93c8a99215",
     "tools/aidlc-qa-coverage.mjs": "0624ad0a67948e3935dcfc7c739518f7780a3b4b212df88e8d1810e2642cc185",
     "tools/aidlc-scaffold.mjs": "ed8dd6673251d60a858cb25787147cf607854ae5c3b14fa0c0b1b2f95e84e925"
