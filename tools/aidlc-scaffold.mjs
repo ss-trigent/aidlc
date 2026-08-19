@@ -573,5 +573,5 @@ Scaffold complete and verified. Two steps remain that a script cannot do:
    "we just scaffolded — tailor the standards to this repo".
 2. Land it as a PR and make the aidlc-check status required via branch
    protection — that click is what turns the gates from guidance into governance.
-${hasCheckWorkflow ? '\nYour existing workflow already runs aidlc-check — no CI change made.' : ''}`,
+${hasCheckWorkflow ? '\nYour existing workflow already runs aidlc-check — no CI change made. One thing\nto verify there: checkout with fetch-depth: 0, or the Gate D1 plan-tamper check\ncannot reach approved plan commits and can only warn instead of fail.' : ''}`,
 );

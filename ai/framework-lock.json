@@ -23,7 +23,7 @@
     "ai/roles/ux.md": "98926bdf3f41f0c6b9797a936905fd78be243149e6a81c3426e36e385e9b6f96",
     "ai/templates/adr.md": "b0c2042d8520f71806437ad28856517cf1c4b0bdf31f7be200fd7ebcf1309ddd",
     "ai/templates/brd.md": "420ff55eb8f728c7b952d7c5f8f32fbe1bca64f2e88ae55fabd090934f192095",
-    "ai/templates/change-log.md": "f2a28478645fc796705aa9dfdcbd349528c658008423f7b2704cca52f4b62a98",
+    "ai/templates/change-log.md": "77522eaa70f04e2315310de349c5e1714651bcc3230296856db6e666621733b1",
     "ai/templates/decisions.md": "56d8f0e029f58911b1c74c8b20fe0b246ba35844730363e12dfe1f6adf5e77ed",
     "ai/templates/impact-analysis.md": "0c42565bcc8c8d72b02036f7aa32fb0b49b9784c2f49ce2181bf45e33f6d3992",
     "ai/templates/implementation-plan.md": "04b4305d5c206ffae8cfa684559ca850ccd6ad46068778182c669081fa29ef17",
@@ -39,6 +39,6 @@
     "tools/aidlc-check.mjs": "647abb8104da10b1930ca906169b1a0c6f8b5aa0f88be0c0b6fefc6138bb2825",
     "tools/aidlc-jira.mjs": "18e35990b478be478412e59a8d9e77fda37a356bfb86ff9c2a113b93c8a99215",
     "tools/aidlc-qa-coverage.mjs": "0624ad0a67948e3935dcfc7c739518f7780a3b4b212df88e8d1810e2642cc185",
-    "tools/aidlc-scaffold.mjs": "730df2de6fb2a7a23b5f0223eecd53996cc02869055a795174a6b3f9f19ca826"
+    "tools/aidlc-scaffold.mjs": "ed8dd6673251d60a858cb25787147cf607854ae5c3b14fa0c0b1b2f95e84e925"
   }
 }
