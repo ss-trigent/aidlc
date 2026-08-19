@@ -40,7 +40,7 @@ Ask **one** question: which of these fits — or have them describe, in their ow
 4. **Write the plan** to `<e2e-root>/plans/US-###.md` from `ai/templates/test-plan.md`: positive per criterion, then negative, then boundary, in steps a human could execute by hand. Open it as a PR and get the human's approval **before** generating any test. Say plainly which criteria you are leaving to cheaper test levels, and where.
 5. **Generate** one scenario at a time, driving the app through the Playwright MCP so every locator is checked against the real DOM instead of guessed. Each test's title carries the citation: `test('expands leg detail (US-003/AC-02)', …)`.
 6. **Run and heal.** `npx playwright test`. Locator and timing drift in your own test is yours to fix. A failure that reveals **product** behaviour is a finding — file a bug issue, never loosen the assertion or add a retry that hides it.
-7. **Record it.** Same repo: add the spec path to the story's `tests[]` in `knowledge/traceability/manifest.json`, then run `node tools/aidlc-check.mjs` — the criterion is now proven like any other. Separate QA repo: run `node tools/aidlc-qa-coverage.mjs` and open the coverage PR against the product repo, telling the human it is evidence and cannot block the story PR.
+7. **Record it.** Same repo: add the spec path to the story's `tests[]` in `knowledge/traceability/manifest.json`, then run `node tools/aidlc-check.mjs` — the criterion is now proven like any other. Separate QA repo: run `node tools/aidlc-qa-coverage.mjs --report <e2e-root>/playwright-report.json` (the JSON reporter writes next to the config, not the cwd) and open the coverage PR against the product repo, telling the human it is evidence and cannot block the story PR.
 
 ## Never
 

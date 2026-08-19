@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,7 +122,17 @@ test('--profile e2e merges into an existing MCP config instead of replacing it',
   // what an adopting repo already has (ai/integrations.md names these two)
   writeFileSync(
     join(target, '.mcp.json'),
-    JSON.stringify({ mcpServers: { nx: { command: 'npx', args: ['nx-mcp'] } } }, null, 2),
+    JSON.stringify(
+      {
+        mcpServers: {
+          nx: { command: 'npx', args: ['nx-mcp'] },
+          // a playwright entry the team already tailored (pinned version)
+          playwright: { command: 'npx', args: ['-y', '@playwright/mcp@0.0.1'] },
+        },
+      },
+      null,
+      2,
+    ),
   );
   writeFileSync(
     join(target, 'opencode.json'),
@@ -133,7 +143,11 @@ test('--profile e2e merges into an existing MCP config instead of replacing it',
 
   const cfg = (f) => JSON.parse(readFileSync(join(target, f), 'utf8'));
   assert.ok(cfg('.mcp.json').mcpServers.nx, 'the team\'s server survived');
-  assert.ok(cfg('.mcp.json').mcpServers.playwright, 'playwright was added');
+  assert.deepEqual(
+    cfg('.mcp.json').mcpServers.playwright.args,
+    ['-y', '@playwright/mcp@0.0.1'],
+    "the team's tailored playwright entry was not reset to the seed",
+  );
   assert.ok(cfg('opencode.json').mcp.context7, 'the team\'s opencode server survived');
   assert.ok(cfg('opencode.json').mcp.playwright, 'playwright was added');
   assert.equal(cfg('opencode.json').model, 'ours', 'unrelated opencode config survived');
@@ -232,4 +246,26 @@ test('a --profile e2e rerun preserves the config and setup the team edited', () 
 
   assert.equal(readFileSync(cfg, 'utf8'), '// ours: testDir moved\n');
   assert.equal(readFileSync(setup, 'utf8'), '// ours: real selectors\n');
+});
+
+test('build-surfaces sweeps orphaned surfaces, but only in the framework repo', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-orphan-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  run(target, '--profile', 'e2e'); // gives us .claude/skills/qa + generated surfaces
+  const bs = join(target, 'tools', 'aidlc-build-surfaces.mjs');
+  const ghost = join(target, '.cursor', 'commands', 'ghost.md');
+  writeFileSync(ghost, 'left behind by a removed persona\n');
+
+  // an adopting repo shares these directories — never swept, never flagged
+  execFileSync(process.execPath, [bs, '--check'], { cwd: target, encoding: 'utf8' });
+  assert.ok(existsSync(ghost), 'adopting repos are left alone');
+
+  // the framework source repo owns them fully — flagged on --check, swept on build
+  mkdirSync(join(target, 'packages', 'aidlc-plugin'), { recursive: true });
+  assert.throws(
+    () => execFileSync(process.execPath, [bs, '--check'], { cwd: target, encoding: 'utf8' }),
+    (e) => /DRIFT: .*ghost\.md has no \.claude\/ source/.test(`${e.stdout}${e.stderr}`),
+  );
+  execFileSync(process.execPath, [bs], { cwd: target, encoding: 'utf8' });
+  assert.ok(!existsSync(ghost), 'rebuild removed the orphan');
 });

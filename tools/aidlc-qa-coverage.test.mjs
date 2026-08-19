@@ -162,9 +162,13 @@ function scaffolded(coverage) {
       `${JSON.stringify(coverage, null, 2)}\n`,
     );
   try {
+    // GITHUB_HEAD_REF scrubbed for the same reason as every other runCheck
+    // helper: the child must derive delivery state from the fixture's branch,
+    // not from this repo's PR branch.
     return execFileSync(process.execPath, [join(REPO, 'tools', 'aidlc-check.mjs')], {
       cwd: dir,
       encoding: 'utf8',
+      env: { ...process.env, GITHUB_HEAD_REF: '' },
     });
   } catch (e) {
     return `${e.stdout ?? ''}${e.stderr ?? ''}`;

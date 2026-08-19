@@ -922,18 +922,19 @@ const COVERAGE_PATH = join(
   'traceability',
   'e2e-coverage.json',
 );
+// whether this repo has that commit — checks 15 and 16 both verify claims by SHA
+const reachableSha = (sha) => {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+      cwd: REPO,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
 if (existsSync(COVERAGE_PATH)) {
-  const knownSha = (sha) => {
-    try {
-      execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
-        cwd: REPO,
-        stdio: 'ignore',
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  };
   try {
     const { validateCoverage } = await import(
       pathToFileURL(join(REPO, 'tools', 'aidlc-qa-coverage.mjs')).href
@@ -941,7 +942,7 @@ if (existsSync(COVERAGE_PATH)) {
     const { errors: e, warnings: w } = validateCoverage(
       JSON.parse(read(COVERAGE_PATH)),
       storyAcs,
-      knownSha,
+      reachableSha,
     );
     for (const m of e) err(`e2e-coverage.json: ${m}`);
     for (const m of w) warn(`e2e-coverage.json: ${m}`);
@@ -970,17 +971,6 @@ if (existsSync(SPECS_DIR)) {
       if (m) ids.add(m[1]);
     }
     return ids;
-  };
-  const reachableSha = (sha) => {
-    try {
-      execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
-        cwd: REPO,
-        stdio: 'ignore',
-      });
-      return true;
-    } catch {
-      return false;
-    }
   };
   // A shallow clone genuinely cannot see an old commit; a full clone that cannot
   // see it is looking at an approval that never happened here.

@@ -250,10 +250,12 @@ const mergeMcp = (rel, seedName) => {
     return;
   }
   const key = Object.keys(seed).find((k) => k !== '$schema');
+  // Existing entries win, seed entries fill gaps: once the team has a
+  // `playwright` server (pinned version, extra args), a rerun must not reset it.
   write({
     ...existing,
     ...(seed.$schema && !existing.$schema ? { $schema: seed.$schema } : {}),
-    [key]: { ...(existing[key] ?? {}), ...seed[key] },
+    [key]: { ...seed[key], ...(existing[key] ?? {}) },
   });
 };
 if (profile === 'e2e') {

@@ -14,14 +14,17 @@
 // Enforcement parity is uneven and deliberate (ADR-005): opencode agents keep
 // the read-only guarantee at tool level (write/edit denied); Cursor and
 // Copilot have no per-agent tool restriction, so their read-only personas get
-// an explicit charter notice injected instead. Removing a persona from
-// PERSONAS requires deleting its generated files by hand — the shared
-// directories cannot be swept wholesale.
+// an explicit charter notice injected instead. In the framework source repo a
+// removed persona's generated files are swept (and --check flags them); in
+// adopting repos the shared directories are never swept wholesale.
 import {
   readFileSync,
   existsSync,
   writeFileSync,
   mkdirSync,
+  readdirSync,
+  statSync,
+  rmSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 
@@ -122,6 +125,34 @@ for (const [rel, content] of files) {
   } else {
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
+  }
+}
+
+// ---- orphans: a deleted source must take its surfaces with it ----------------
+// Only in the framework source repo (marked by packages/aidlc-plugin): there
+// these directories hold nothing but this tool's output, so an unexpected file
+// is a leftover from a removed persona. Adopting repos share the directories
+// with their own files and are left alone.
+if (existsSync(join(REPO, 'packages', 'aidlc-plugin'))) {
+  const OWNED = [
+    ...['.cursor', '.opencode'].flatMap((d) =>
+      ['skills', 'commands', 'agents'].map((s) => join(d, s)),
+    ),
+    ...['skills', 'prompts', 'agents'].map((s) => join('.github', s)),
+  ];
+  for (const dir of OWNED) {
+    if (!existsSync(join(REPO, dir))) continue;
+    for (const sub of readdirSync(join(REPO, dir), { recursive: true })) {
+      const rel = join(dir, sub);
+      if (!statSync(join(REPO, rel)).isFile() || files.has(rel)) continue;
+      if (check) {
+        console.error(`DRIFT: ${rel} has no .claude/ source — orphaned surface`);
+        drift++;
+      } else {
+        rmSync(join(REPO, rel));
+        console.log(`removed orphaned surface ${rel}`);
+      }
+    }
   }
 }
 if (check) {
