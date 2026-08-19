@@ -1,6 +1,6 @@
 # aidlc — AI-DLC as a Claude Code plugin
 
-Packages this repo's AI-DLC framework so any team can install it: seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) driving three CI-enforced gates (Discovery → Delivery → Release), with approvals as GitHub PR reviews and a CI-validated traceability graph. Full methodology: [`ai/AI-DLC.md`](framework/ai/AI-DLC.md); comparison with spec-kit / AWS aidlc-workflows: [`docs/aidlc-vs-spec-kit.md`](../../docs/aidlc-vs-spec-kit.md).
+Packages this repo's AI-DLC framework so any team can install it: seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) driving three CI-enforced gates (Discovery → Delivery → Release), with approvals as GitHub PR reviews — bar one named exception, the developer's in-chat plan review at Gate D1 — and a CI-validated traceability graph. Full methodology: [`ai/AI-DLC.md`](framework/ai/AI-DLC.md); comparison with spec-kit / AWS aidlc-workflows: [`docs/aidlc-vs-spec-kit.md`](../../docs/aidlc-vs-spec-kit.md).
 
 ## Install
 

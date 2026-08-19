@@ -16,7 +16,11 @@ answers it by approving a PR:
 | **3 Release**   | Can we ship it safely?           | DevOps                       |
 
 Nothing is "approved" because an AI said so. Approval is your click in GitHub,
-recorded against your identity, on a branch that CI has already checked.
+recorded against your identity, on a branch that CI has already checked. One
+exception, named on purpose: the developer's implementation plan is approved in
+chat, before any code exists, because a pull request at that point is a review
+people learn to skip. Your name and the version you read are written into the
+plan, and CI fails a plan that changed afterwards without saying so.
 
 ## 2. Start your persona
 
@@ -27,7 +31,7 @@ In your editor, type the command for your role:
 /ba           requirements, stories, change requests
 /ux           screens, states, the design system
 /architect    system + DB design, ADRs, PR review
-/dev          implement one story as one PR
+/dev          plan a story, get the plan approved, then implement it as one PR
 /qa           tests derived from requirements, browser tests, bug reports
 /devops       CI, releases, rollback
 /manager      status, routing, delivery plans

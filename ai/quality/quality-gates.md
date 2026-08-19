@@ -5,7 +5,7 @@ Three gates, each answering one question, each approved by an authenticated GitH
 | Gate        | Question         | Approval                     | Enforced by                                             |
 | ----------- | ---------------- | ---------------------------- | ------------------------------------------------------- |
 | 1 Discovery | Right thing?     | PO/BA merges the artifact PR | `aidlc-check` + protected `main` + review               |
-| 2 Delivery  | Provably works?  | Human merges the story PR    | CI (lint/typecheck/test/build) + `aidlc-check` + review |
+| 2 Delivery  | Provably works?  | Human approves the plan (D1), then merges the story PR (D2) | CI (lint/typecheck/test/build) + `aidlc-check` + review |
 | 3 Release   | Production safe? | Human approves promotion     | pipeline + environment approval                         |
 
 ## The enforcement contract
