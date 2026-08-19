@@ -18,7 +18,12 @@
 //   4. listed test files exist and cite every AC of their story (US-###/AC-##)
 //      in the title of an ACTIVE test — citations in comments or skipped tests
 //      (it.skip/xit/describe.skip) are not proof. For a story IN DELIVERY
-//      (branch feat/US-###-*), having no tests at all is an error, not a warning
+//      (branch feat/US-###-*), having no tests at all is an error, not a warning.
+//      Both 3 and 4 read manifest.stories, so the reverse edge is checked too: a
+//      story FILE with no manifest entry is a warning while it is being drafted
+//      and an error once its branch is in delivery — otherwise it would escape
+//      the AC->test gate entirely. A branch naming a story that has no file at
+//      all is always an error
 //   5. spec files citing a US are listed in that story's manifest entry (no stale manifest)
 //   6. product projects (api, ui, graph-engine) declare a test target
 //   7. traceability-matrix.md matches what the manifest generates (no hand edits)
@@ -234,6 +239,32 @@ if (manifest) {
     }
     if (entry.stories.length === 0)
       warn(`${req} has no covering story (unscheduled scope)`);
+  }
+
+  // The reverse edge. Checks 3 and 4 iterate manifest.stories, so a story FILE
+  // that nobody added to the manifest was invisible to both: its ACs were never
+  // matched against the file, and no citing test was ever required. On a
+  // delivery branch that meant a green build with zero tests — the precise
+  // outcome check 4 exists to prevent. Escalates like every other incomplete
+  // artifact here (ai/AI-DLC.md): a warning while the story is still being
+  // drafted, a hard error once its own branch is in delivery.
+  for (const us of storyAcs.keys()) {
+    if (stories[us]) continue;
+    if (inDelivery.has(us))
+      err(
+        `${us} is in delivery (branch feat/${us}-*) but has no entry in ${rel(manifestPath)} — add it with its acs[] and tests[], or the AC->test gate cannot see this story at all`,
+      );
+    else
+      warn(
+        `${us} has a story file but no entry in ${rel(manifestPath)} — untraced until the stories PR adds it`,
+      );
+  }
+  // A branch can also name a story that does not exist in the first place.
+  for (const us of inDelivery) {
+    if (!storyAcs.has(us))
+      err(
+        `branch is delivering ${us}, which has no story file in inception/stories/user-stories/ — check the branch name against the approved story`,
+      );
   }
 
   for (const [us, entry] of Object.entries(stories)) {

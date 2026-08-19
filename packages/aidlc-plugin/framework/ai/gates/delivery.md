@@ -45,6 +45,7 @@ Everything for the story rides **one PR**: code, tests, ADR if any, manifest upd
 | Lint, typecheck, build, tests green                                                                   | CI (required statuses)                                         |
 | Every AC in the manifest has a passing test citing `US-###/AC-##` in an active test title             | `aidlc-check`                                                  |
 | A story PR with no AC-citing tests at all fails — delivery is derived from the `feat/US-###-*` branch | `aidlc-check`                                                  |
+| A story in delivery is actually **in** the manifest — an unmanifested story would escape the AC→test rule, since that rule reads the manifest | `aidlc-check`                                                  |
 | Those tests actually assert the criterion (a citation alone is not proof)                             | Architect persona review + human review                        |
 | Browser-level criteria: the plan was reviewed before the tests were generated from it                 | Human review of the plan's own PR                              |
 | E2E tests in a **separate** QA repo cannot block this PR — their evidence file is validated when published, and its absence requires nothing | `aidlc-check` (check 15); blocking needs same-repo e2e |

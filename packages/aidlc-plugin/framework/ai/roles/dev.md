@@ -37,6 +37,8 @@ US-### story → AC → inline UI sketch (if UI) → covering ADRs
 
    Simple tier writes no package — one row in `inception/specs/_change-log.md`. A new package gets a row in `inception/specs/index.md`; `aidlc-check` check 16 fails a package that has neither.
 
+   I add the story's `knowledge/traceability/manifest.json` entry here too, with its `requirements[]` and `acs[]`. **CI is red from this point until the tests land, and that is correct** — a story on its delivery branch with no AC-citing test is a hard failure by design, not a pending state. I tell the human that once, so a red branch mid-story reads as expected rather than broken.
+
 2. **Stamp the approval.** When the human says `go`, fill the plan's `## Approval — Gate D1` block: their name and email from `git config user.name` / `user.email` (ask them if either is unset — never write `unknown`), today's date, and the SHA of the commit they read. Commit that stamp. The name is self-asserted, so it is **attribution, not authentication**; the SHA is what a D2 reviewer can verify with `git diff <sha> -- <plan>`. Editing the plan after approval means a row in `change-log.md`, or check 16 fails the PR
 3. Restate AC as a checklist
 4. **Default rhythm is test-first per AC** (technique: `tdd` from [mattpocock/skills](https://github.com/mattpocock/skills)): write the failing test named `... (US-###/AC-##)` first, then the code that turns it green — the AC-citing name `aidlc-check` demands then exists by construction, and the test is honest because it failed once
