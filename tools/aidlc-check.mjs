@@ -45,6 +45,11 @@
 //      tests in-repo, or having none, is unaffected. It can never prove that a
 //      remote assertion ran, only that the claim is well-formed and the criterion
 //      exists, which is why a pass must carry the run it came from
+//  16. a spec package present under inception/specs/ is internally honest:
+//      every FR/NFR in spec.md has a traceability row, every cited path exists,
+//      every US/AC it cites is real, it has an index row, and a Gate D1 approval
+//      block is well-formed and matches the plan it approved. An ABSENT package
+//      fails nothing — CI cannot know the tier, and Simple work has none.
 //  14. framework-owned files match ai/framework-lock.json (SHA-256 per file).
 //      Adopting teams edit only project-owned paths (ai/standards/,
 //      ai/templates/jira/); an edited or deleted framework file fails the
@@ -909,6 +914,167 @@ if (existsSync(COVERAGE_PATH)) {
     for (const m of w) warn(`e2e-coverage.json: ${m}`);
   } catch (e) {
     err(`cannot validate e2e-coverage.json: ${e.message}`);
+  }
+}
+
+// ---- 16. development spec packages are internally honest ---------------------
+// Absent package -> silent, for the same reason as check 15: CI cannot know the
+// task's tier, and a Simple-tier change legitimately has no package. Present ->
+// validated, because a traceability table nobody verifies is a place to write
+// requirement IDs that were never implemented.
+const SPECS_DIR = join(REPO, 'inception', 'specs');
+if (existsSync(SPECS_DIR)) {
+  const indexText = existsSync(join(SPECS_DIR, 'index.md'))
+    ? read(join(SPECS_DIR, 'index.md'))
+    : '';
+  // `| FR-01 | ...` — the ID in the first cell of a table row, the same shape
+  // check 1 uses for REQ/NFR/RISK rows in inception/product.
+  const rowIds = (text, kinds) => {
+    const ids = new Set();
+    for (const line of text.split('\n')) {
+      const m = line.match(new RegExp(`^\\|\\s*((?:${kinds})-\\d{2})\\s*\\|`));
+      if (m) ids.add(m[1]);
+    }
+    return ids;
+  };
+  const reachableSha = (sha) => {
+    try {
+      execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+        cwd: REPO,
+        stdio: 'ignore',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  for (const name of readdirSync(SPECS_DIR)) {
+    const pkgDir = join(SPECS_DIR, name);
+    if (name.startsWith('.') || !statSync(pkgDir).isDirectory()) continue;
+    const specPath = join(pkgDir, 'spec.md');
+    if (!existsSync(specPath)) {
+      err(
+        `${rel(pkgDir)}: no spec.md — a spec package's requirements live there`,
+      );
+      continue;
+    }
+    const at = `${rel(pkgDir)}:`;
+    const specText = read(specPath);
+
+    // 1. every FR/NFR in spec.md appears in traceability.md
+    const declared = rowIds(specText, 'FR|NFR');
+    const tracePath = join(pkgDir, 'traceability.md');
+    const traceText = existsSync(tracePath) ? read(tracePath) : '';
+    if (!traceText && declared.size)
+      err(
+        `${at} declares ${declared.size} requirement(s) but has no traceability.md`,
+      );
+    const traced = rowIds(traceText, 'FR|NFR');
+    for (const id of declared)
+      if (!traced.has(id))
+        err(
+          `${at} ${id} is in spec.md but not in traceability.md — every requirement gets a row, even one with status "not started"`,
+        );
+
+    // 2. every path cited in traceability.md resolves
+    for (const m of traceText.matchAll(/`([^`\s]+\.[a-z0-9]+)`/gi)) {
+      const cited = m[1];
+      if (cited.startsWith('http') || !cited.includes('/')) continue;
+      if (!existsSync(join(REPO, cited)))
+        err(
+          `${at} traceability.md cites \`${cited}\` which does not exist — a table pointing at a deleted file is a lie, not a record`,
+        );
+    }
+
+    // 3. every US/AC cited in spec.md resolves
+    for (const us of new Set(
+      [...specText.matchAll(/US-\d{3}/g)].map((x) => x[0]),
+    )) {
+      if (!storyAcs.has(us))
+        err(
+          `${at} spec.md cites ${us} which is not a story in inception/stories/user-stories/`,
+        );
+    }
+    const storyOfPkg = name.match(/^US-\d{3}/)?.[0];
+    if (storyOfPkg && storyAcs.has(storyOfPkg)) {
+      const acs = storyAcs.get(storyOfPkg);
+      for (const ac of new Set(
+        [...specText.matchAll(/\bAC-\d{2}\b/g)].map((x) => x[0]),
+      )) {
+        if (!acs.has(ac))
+          err(`${at} spec.md cites ${ac} which ${storyOfPkg} does not define`);
+      }
+    }
+
+    // 4. the package has a row in the index
+    if (!indexText.includes(name))
+      err(
+        `${at} no row in inception/specs/index.md — the catalog is how the next developer finds an existing package instead of writing a second one`,
+      );
+
+    // 5-6. the Gate D1 approval block, when the plan carries one
+    const planPath = join(pkgDir, 'implementation-plan.md');
+    if (!existsSync(planPath)) continue;
+    const planText = read(planPath);
+    if (!/^##\s+Approval\s+—\s+Gate D1/m.test(planText)) continue;
+    const field = (label) =>
+      planText.match(
+        new RegExp(`^\\|\\s*${label}\\s*\\|\\s*(.+?)\\s*\\|`, 'm'),
+      )?.[1] ?? '';
+    if (!/^approved$/i.test(field('Status'))) continue;
+    const by = field('Approved by');
+    const on = field('Approved on');
+    const sha = field('Plan commit approved');
+    if (!/@/.test(by))
+      err(
+        `${at} implementation-plan.md is approved but names no approver with an email — Gate D1 records name and email from git config, or asks the human`,
+      );
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on))
+      err(
+        `${at} implementation-plan.md approval date "${on}" is not an ISO date (YYYY-MM-DD)`,
+      );
+    if (!/^[0-9a-f]{7,40}$/.test(sha)) {
+      err(
+        `${at} implementation-plan.md approval records no plan commit — that SHA is what makes the approval verifiable`,
+      );
+    } else if (!reachableSha(sha)) {
+      warn(
+        `${at} approved plan commit ${sha} is not reachable here (shallow clone?) — cannot verify the plan is unchanged since approval`,
+      );
+    } else {
+      let approvedPlan = '';
+      try {
+        approvedPlan = execFileSync(
+          'git',
+          ['show', `${sha}:${rel(planPath)}`],
+          { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+        ).replace(/\r\n/g, '\n');
+      } catch {
+        warn(
+          `${at} implementation-plan.md did not exist at ${sha} — the approved SHA should be the commit the human read`,
+        );
+      }
+      // Compare the plan WITHOUT its approval block: stamping the approval is
+      // itself a change to the file, so a naive diff always differs. Splitting on
+      // headings (rather than a lookahead) keeps this correct when the approval
+      // block is the last section in the file.
+      const strip = (t) =>
+        t
+          .split(/^(?=##\s)/m)
+          .filter((sec) => !/^##\s+Approval\s+—\s+Gate D1/.test(sec))
+          .join('');
+      if (approvedPlan && strip(approvedPlan) !== strip(planText)) {
+        const logPath = join(pkgDir, 'change-log.md');
+        if (
+          !existsSync(logPath) ||
+          !/^\|\s*\d{4}-\d{2}-\d{2}/m.test(read(logPath))
+        )
+          err(
+            `${at} implementation-plan.md changed after its Gate D1 approval (${sha}) with no dated row in change-log.md — see it with: git diff ${sha} -- ${rel(planPath)}`,
+          );
+      }
+    }
   }
 }
 

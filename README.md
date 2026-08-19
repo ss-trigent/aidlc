@@ -104,6 +104,7 @@ Open a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) agai
 | `packages/aidlc-plugin/`              | The Claude Code plugin (skills + bundled framework payload)         | **generated** — `node tools/aidlc-build-plugin.mjs`     |
 | `.cursor/` `.opencode/` `.github/` persona files | Cursor / opencode / GitHub Copilot surfaces ([ADR-005](knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md)) | **generated** — `node tools/aidlc-build-surfaces.mjs`   |
 | `.claude-plugin/marketplace.json`     | The plugin marketplace this repo hosts                              | hand-maintained                                         |
+| `inception/specs/`                    | Per-story development spec packages — DEV-owned, one folder per story ([ADR-007](knowledge/decisions/ADR-007-dev-spec-packages.md)) | team-owned; the templates and check 16 are framework-owned |
 | `docs/`, `knowledge/decisions/`       | Adoption guide, spec-kit comparison, framework ADRs                 | hand-maintained                                         |
 
 ## Maintaining the framework

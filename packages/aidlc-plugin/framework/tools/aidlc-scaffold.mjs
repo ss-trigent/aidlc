@@ -343,6 +343,11 @@ put(join('knowledge', 'traceability', 'manifest.json'), seed('manifest.json'));
 // for the format of their own deliverable, so the folders cannot start empty.
 put(join('inception', 'architecture', 'README.md'), seed('architecture-README.md'));
 put(join('inception', 'design', 'README.md'), seed('design-README.md'));
+
+// The development cycle's spec home (ADR-007). index.md is read by aidlc-check,
+// so it ships as a real file rather than a .gitkeep.
+put(join('inception', 'specs', 'index.md'), seed('specs-index.md'));
+put(join('inception', 'specs', '_change-log.md'), seed('specs-change-log.md'));
 put('ONBOARDING.md', seed('ONBOARDING.md'));
 
 // remaining artifact homes — .gitkeep so the empty structure survives the scaffold PR

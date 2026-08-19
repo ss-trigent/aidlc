@@ -79,6 +79,17 @@ Then, in the repo's branch protection rules, mark that status **required**. This
 
 Or go straight to any persona: `/ux` `/architect` `/dev` `/qa` `/devops` `/manager`. Personas speak plain language, ask one question at a time, and never require the human to touch git — every decision arrives as a GitHub link plus "here's the click that approves it."
 
+## The development cycle — two gates and a written plan
+
+Once a story is approved, the developer's loop has exactly two human decision points:
+
+1. **Gate D1 — the plan.** `/dev` classifies the task, writes a spec package into `inception/specs/US-###-<slug>/`, and shows you the implementation plan and impact analysis. You read them and reply `go`. Your name, the date, and the SHA of the plan you read are stamped into the plan file. No PR, no GitHub round-trip — this happens before any code exists.
+2. **Gate D2 — the PR.** Code, tests citing `US-###/AC-##`, the filled-in traceability table, pasted command output. You review and merge in GitHub.
+
+How much package the work carries depends on its tier ([`ai/context/task-classification.md`](../ai/context/task-classification.md)): a Simple change records one row in `inception/specs/_change-log.md`; a Medium one updates the existing package; a Complex one writes all of it — `spec.md`, `implementation-plan.md`, `impact-analysis.md`, `decisions.md`, `traceability.md`, `change-log.md`. QA adds `test-cases.md` only for scenarios that can never be automated; most stories have none.
+
+`aidlc-check` check 16 verifies any package that exists — every requirement traced, every cited file real, and the plan unchanged since you approved it unless the change log says otherwise. A story with no package fails nothing: CI cannot know the tier, so what makes a package *required* is the tier table and your review at D1. See [ADR-007](../knowledge/decisions/ADR-007-dev-spec-packages.md) for why D1 is the one approval here that is not a GitHub review, and what that costs.
+
 ## What your team owns vs. what stays framework-owned
 
 After init, the adopting team **owns and freely edits**:

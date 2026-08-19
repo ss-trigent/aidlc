@@ -156,6 +156,8 @@ PLANNED CHANGES
 - Open questions: <what could NOT be verified by reading — never a guess>
 ```
 
+At **Medium and Complex** tier the plan is a **file**, not a chat block: write the spec package into `inception/specs/US-###-<slug>/` first (Step 5), then let `PLANNED CHANGES` point at `implementation-plan.md` rather than restate it. The human reads the file; the block tells them where it is.
+
 If **Open questions** is non-empty, ask them and stop — a plan built on unanswered questions is a guess with formatting. Only when every load-bearing fact is verified or answered do you write: **"Reply `go` to proceed, or tell me what to change."**
 
 If **Confidence: Low**, ask one multiple-choice question *before* presenting the plan — you can't plan changes for a tier you haven't confirmed:
@@ -168,13 +170,15 @@ If **Confidence: Low**, ask one multiple-choice question *before* presenting the
 
 ## Step 5 — What each tier costs
 
-The tier decides which existing framework machinery is mandatory. It introduces no new gate — Discovery, Delivery and Release are unchanged ([`ai/AI-DLC.md`](../AI-DLC.md)).
+The tier decides which existing framework machinery is mandatory, and how much of the spec package the work carries. It introduces no new gate — Discovery, Delivery and Release are unchanged ([`ai/AI-DLC.md`](../AI-DLC.md)).
 
-| Tier        | Story                                                    | Architect                                                  | QA                                          | PR                                          |
-| ----------- | -------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------- | ------------------------------------------- |
-| **Simple**  | none                                                     | none                                                       | none                                        | none, or a `docs/` branch PR                |
-| **Medium**  | approved `US-###`                                        | advisory review of the diff                                | tests derived from the AC before the diff   | one story PR — `feat/US-###-<slug>`         |
-| **Complex** | approved `US-###`; split it if one PR can't carry it     | **design note before code**; ADR-### when there's a real trade-off | same, plus negative and boundary cases | one story PR; Architect findings resolved or rebutted before merge |
+| Tier        | Story                                                | Spec package                                                                                                                                                                                        | Architect                                                          | QA                                        | PR                                                                 |
+| ----------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------ |
+| **Simple**  | none                                                 | none — one row in `inception/specs/_change-log.md`                                                                                                                                                    | none                                                               | none                                      | none, or a `docs/` branch PR                                        |
+| **Medium**  | approved `US-###`                                    | update the existing package: `traceability.md` + `change-log.md`; add `implementation-plan.md` when the change spans more than one file                                                                | advisory review of the diff                                        | tests derived from the AC before the diff | one story PR — `feat/US-###-<slug>`                                 |
+| **Complex** | approved `US-###`; split it if one PR can't carry it | full package in `inception/specs/US-###-<slug>/` — `spec.md`, `implementation-plan.md`, `impact-analysis.md`, `decisions.md`, `traceability.md`, `change-log.md`                                       | **design note before code**; ADR-### when there's a real trade-off | same, plus negative and boundary cases    | one story PR; Architect findings resolved or rebutted before merge  |
+
+The package is what the human reads at **Gate D1** ([`ai/gates/delivery.md`](../gates/delivery.md)). It introduces no third gate: D1 _is_ the `go` that Step 4 below already asks for, now backed by a written plan instead of a chat block that vanishes with the session. `aidlc-check` check 16 validates any package that exists; whether one is required at all is this table's job, and the human's at D1.
 
 Complex is the only tier that blocks on design: implementing a contract, schema, or trust-boundary change without a written design note is how a story PR becomes an architecture argument in a review thread.
 

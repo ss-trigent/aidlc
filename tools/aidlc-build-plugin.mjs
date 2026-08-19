@@ -285,6 +285,37 @@ files.set(
 `,
 );
 
+// The development cycle's spec home (ADR-007). Seeded rather than .gitkeep'd
+// because both files are read by humans (the catalog) and by aidlc-check
+// (check 16's index rule) — an empty directory would make that rule fail on the
+// first spec package a team writes.
+files.set(
+  join('framework', 'seed', 'specs-index.md'),
+  `# Spec index
+
+Every development spec package in this repo. **Check here before creating a new folder** — the capability may already have one, and a change to it is a revision of that package, not a second spec.
+
+| Story | Feature | Tier | Status | Folder |
+| ----- | ------- | ---- | ------ | ------ |
+
+## How to update
+
+- Add a row when you create \`inception/specs/US-###-<slug>/\` (DEV, at Gate D1)
+- Move Status to \`implemented\` when the story PR merges
+- Simple-tier changes own no folder — they record one row in \`_change-log.md\` instead
+`,
+);
+files.set(
+  join('framework', 'seed', 'specs-change-log.md'),
+  `# Spec change log — Simple tier
+
+Changes too small to own a spec package: a docs edit, a user-facing string, a constant. One row each. Anything with a spec folder logs in that folder's own \`change-log.md\` instead.
+
+| Date | Change | Why | Story or issue |
+| ---- | ------ | --- | -------------- |
+`,
+);
+
 // ---- e2e layer seeds (aidlc-scaffold --profile e2e) -------------------------
 // Deliberately stack-neutral: no Nx, no framework-specific runner, and the only
 // external dependency is Playwright itself plus its MCP server — which every

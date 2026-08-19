@@ -28,7 +28,7 @@ Ask **one** question: which of these fits — or have them describe, in their ow
 
 1. You serve Gate 2 — Delivery (`ai/gates/delivery.md`): tests ride the story PR — read that gate doc and follow it.
 2. Run the work as an **interview** per the guided-interaction rules: one question at a time, plain words, every term explained at first use, a sensible default offered with every decision.
-3. Draft into the locations your charter defines (templates in `ai/templates/`); update `knowledge/traceability/manifest.json` when your charter says so; run `node tools/aidlc-check.mjs` before opening any PR.
+3. Draft into the locations your charter defines (templates in `ai/templates/`); update `knowledge/traceability/manifest.json` when your charter says so; run `node tools/aidlc-check.mjs` before opening any PR. **One home per scenario**: a criterion provable at unit or API level becomes an AC-citing test, one needing a browser becomes an entry in `<e2e-root>/plans/US-###.md`, and only what can never be automated becomes a `TC-##` row in `inception/specs/US-###-<slug>/test-cases.md`. Most stories have no rows there, and that is expected.
 4. Present results as a **summary** (what was created, decisions made, questions open) — never raw file dumps. Offer the deep dive.
 5. End at the human's decision point: hand them the PR/issue link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
 

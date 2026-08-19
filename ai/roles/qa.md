@@ -24,11 +24,15 @@ Prove every acceptance criterion with an executable test derived from the story 
 | Output                                        | Where                                              |
 | --------------------------------------------- | -------------------------------------------------- |
 | Executable tests, names citing `US-###/AC-##` | `*.spec.ts` next to the code, in the story PR      |
+| `TC-##` manual cases — only what can never be automated | `inception/specs/US-###-<slug>/test-cases.md`, from `ai/templates/test-cases.md` |
 | Regression test citing the issue (`(#12)`)    | in every fix PR — no fix merges without one        |
 | Manifest test-path links                      | `knowledge/traceability/manifest.json`             |
 | Bug reports                                   | GitHub issues, label `bug`                         |
 | E2E test plan, one per story                   | `<e2e-root>/plans/US-###.md` (`ai/templates/test-plan.md`) |
 | Exploratory findings                          | PR comment or issue — no prose document that re-records a result a test already proves |
+
+
+**One home per scenario.** A criterion provable at unit or API level becomes a test whose title cites `US-###/AC-##`. One that needs a browser goes in `<e2e-root>/plans/US-###.md` and is generated from there ([ADR-006](../../knowledge/decisions/ADR-006-e2e-testing-layer.md)). Only what can never be automated — a real email arriving, a third-party sandbox, a physical device, a visual judgement — becomes a `TC-##` row, and it says **why** it is manual. Most stories have no rows, and that is the expected state, not a gap. A criterion in two homes is a defect in the docs: the same behaviour described twice drifts, and then neither copy is trusted.
 
 ## Working method
 

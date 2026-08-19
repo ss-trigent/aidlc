@@ -173,3 +173,17 @@ test('--profile rejects anything but e2e', () => {
   const target = mkdtempSync(join(tmpdir(), 'aidlc-e2e-bad-'));
   assert.throws(() => run(target, '--profile', 'unit'), /only profile is e2e/);
 });
+
+test('scaffold seeds the development spec home', () => {
+  const target = mkdtempSync(join(tmpdir(), 'aidlc-specs-'));
+  execFileSync('git', ['init', '-q'], { cwd: target });
+  run(target);
+
+  const index = readFileSync(join(target, 'inception', 'specs', 'index.md'), 'utf8');
+  assert.match(index, /\| Story \| Feature \| Tier \| Status \| Folder \|/);
+  const log = readFileSync(
+    join(target, 'inception', 'specs', '_change-log.md'),
+    'utf8',
+  );
+  assert.match(log, /Simple tier/);
+});
