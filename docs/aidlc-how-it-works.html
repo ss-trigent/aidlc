@@ -389,7 +389,7 @@
 <dl class="band">
   <div class="stat"><dt>Gates</dt><dd>3<small>Discovery · Delivery · Release</small></dd></div>
   <div class="stat"><dt>AI personas</dt><dd>7<small>one per human counterpart</small></dd></div>
-  <div class="stat"><dt>Validator checks</dt><dd>14<small>one required CI status</small></dd></div>
+  <div class="stat"><dt>Validator checks</dt><dd>15<small>one required CI status</small></dd></div>
   <div class="stat"><dt>Tracked IDs</dt><dd>50<small>all unique, all linked</small></dd></div>
   <div class="stat"><dt>Status files</dt><dd>0<small>status derives from GitHub</small></dd></div>
   <div class="stat"><dt>Editors supported</dt><dd>4<small>Claude Code · Cursor · opencode · Copilot</small></dd></div>
@@ -455,16 +455,16 @@
               </div>
               <div>
                 <dt>What comes out</dt>
-                <dd>One pull request per story holding everything: code, tests named after the criteria they prove, a decision record if a real trade-off existed, and the updated traceability links</dd>
+                <dd>A spec package for the story — technical requirements traced to its criteria, an implementation plan, impact analysis, decisions, traceability — then one pull request holding everything: code, tests named after the criteria they prove, a decision record if a real trade-off existed, and the updated traceability links</dd>
               </div>
               <div>
                 <dt>The distinctive step</dt>
-                <dd><b>Test first, from the requirement.</b> QA derives tests from the story before reading the code, so a passing test has failed at least once. Tests written after a green implementation assert what the code does, not what was asked for.</dd>
+                <dd><b>The plan is reviewed before the code exists.</b> The developer writes the implementation plan and impact analysis first, and a human approves them in chat — the cheapest moment to catch a wrong assumption. Then test first, from the requirement: QA derives tests from the story before reading the code, so a passing test has failed at least once.</dd>
               </div>
             </dl>
             <p class="approve">
-              <b>Human approves</b>
-              A human reviews and merges the story PR. Every required check must be green first. Merged means delivered.
+              <b>Human approves — twice</b>
+              <b>D1:</b> the written implementation plan, in chat. The developer stamps the approver, the date, and the SHA of the plan as read into the plan file, so a later edit is detectable. <b>D2:</b> the story PR — a human reviews and merges, every required check green first. Merged means delivered. Nothing else between them needs a human.
             </p>
           </article>
 
@@ -615,7 +615,7 @@
         <article class="who-card">
           <p class="cmd">/qa</p>
           <p class="human">QA engineer</p>
-          <p class="job">Derives tests from the requirement before reading the code, and files reproducible defects.</p>
+          <p class="job">Derives tests from the requirement before reading the code, and files reproducible defects. For browser-level work it writes a step-by-step plan you approve <em>before</em> any test exists, then generates Playwright tests against the running app.</p>
           <div class="xchg">
             <div><span>You</span><i>“This screen shows the wrong total.”</i></div>
             <div><span>Get</span>A defect issue with steps and real output — and the fix needs a regression test.</div>
@@ -729,8 +729,10 @@
           <div class="node">/dev</div>
           <div class="desc"><span class="gt">Gate 2 · one story, one PR</span>
             <b>The developer</b> types <code>/dev</code> and names a ready story (or asks for the next
-            one). A <code>feat/US-###</code> branch, a failing test per criterion first, then the code
-            that turns it green — evidence pasted into the PR.</div>
+            one). A <code>feat/US-###</code> branch, then the spec package written <em>before</em> any
+            code — and the plan inside it is what a human approves to unblock the work. After that:
+            a failing test per criterion first, then the code that turns it green — evidence pasted
+            into the PR.</div>
         </div>
         <div class="rung dash"></div>
 
@@ -739,8 +741,10 @@
           <div class="desc"><span class="gt">Gate 2 · same PR</span>
             <b>The QA engineer</b> types <code>/qa</code>. Tests are derived from the story
             <em>before</em> reading the diff — positive per criterion, then negative, then boundary.
-            Wrong behavior found any time later becomes a <code>bug</code> issue whose fix PR must add
-            a regression test.</div>
+            Anything that can never be automated — a real email arriving, a device, a visual
+            judgement — becomes a written manual case in the spec package instead; most stories have
+            none. Wrong behavior found any time later becomes a <code>bug</code> issue whose fix PR
+            must add a regression test.</div>
         </div>
         <div class="rung dash"></div>
 
@@ -958,7 +962,7 @@
       <h2>One command decides if any of this is real</h2>
       <p class="lede">
         The operating principle is blunt: <strong>a rule that is not checked by CI or by a GitHub
-        setting is guidance, not governance.</strong> Fourteen checks run on every pull request as a
+        setting is guidance, not governance.</strong> Sixteen checks run on every pull request as a
         single required status.
       </p>
 
@@ -966,7 +970,7 @@
         <div class="ck"><span class="n">1</span><p><b>Every identifier is unique</b> across the whole repository <em>— no two documents claiming the same number</em></p></div>
         <div class="ck"><span class="n">2</span><p><b>Every link resolves in both directions</b>, and every requirement a story cites is a node in the graph <em>— nothing hangs off one-way</em></p></div>
         <div class="ck"><span class="n">3</span><p><b>The criteria list matches the story file</b> exactly <em>— a criterion cannot vanish between document and graph</em></p></div>
-        <div class="ck"><span class="n">4</span><p><b>Every criterion is named in a passing, active test.</b> A story in delivery with no tests fails outright <em>— citations in comments or skipped tests are not proof</em></p></div>
+        <div class="ck"><span class="n">4</span><p><b>Every criterion is named in a passing, active test.</b> A story in delivery with no tests fails outright, and a story the traceability graph has never heard of fails too — otherwise it would slip past this rule instead of being caught by it <em>— citations in comments or skipped tests are not proof</em></p></div>
         <div class="ck"><span class="n">5</span><p><b>Test files that cite a story are listed against it</b> <em>— no stale graph under-reporting coverage</em></p></div>
         <div class="ck"><span class="n">6</span><p><b>Every product project can actually run tests</b> <em>— untestable code is a build failure, not an oversight</em></p></div>
         <div class="ck"><span class="n">7</span><p><b>The published traceability matrix matches what the graph generates</b> <em>— no hand-edited view that flatters reality</em></p></div>
@@ -976,7 +980,9 @@
         <div class="ck"><span class="n">11</span><p><b>Design is complete:</b> a story with UI cites a screen, a screen traces to a story or the requirement it serves, every numbered state is rendered by a component, and the exported token file matches the stylesheet <em>— eight sub-rules</em></p></div>
         <div class="ck"><span class="n">12</span><p><b>Ticket templates are safe:</b> none declares a field that would forward approval or duplicate what the tracker owns, no unknown placeholders, no stale markup <em>— see section 07</em></p></div>
         <div class="ck"><span class="n">13</span><p><b>The Cursor, opencode and Copilot persona surfaces match their sources</b> — generated files, never hand-edited <em>— ADR-005</em></p></div>
-        <div class="ck"><span class="n">14</span><p><b>The framework itself cannot be quietly edited.</b> Every framework-owned file matches a shipped hash lock; an adopting team edits only its own standards, ticket templates and project context — a different rule goes upstream as a change request <em>— newest addition, the shared-library ownership rule</em></p></div>
+        <div class="ck"><span class="n">14</span><p><b>The framework itself cannot be quietly edited.</b> Every framework-owned file matches a shipped hash lock; an adopting team edits only its own standards, ticket templates and project context — a different rule goes upstream as a change request</p></div>
+        <div class="ck"><span class="n">15</span><p><b>Browser-test evidence from another repository is checked, or absent.</b> A QA team that keeps its end-to-end tests in their own repo publishes an evidence file; the validator checks every criterion it claims really exists and that every pass carries the run it came from. No file means no requirement — a team whose tests live in this repo is untouched by the rule <em>— the end-to-end layer &middot; ADR-006</em></p></div>
+        <div class="ck"><span class="n">16</span><p><b>A development spec package, if one exists, tells the truth.</b> Every technical requirement in the spec has a row in the traceability table, every file that table points at exists, every story and criterion it names is real, it is listed in the spec index, and the plan's approval records who approved it, when, and which version — so a plan edited after approval fails unless the change is logged. A story with no package fails nothing: the validator cannot know how big the task was <em>— newest addition, the development spec packages &middot; ADR-007</em></p></div>
       </div>
 
       <div class="cards">
@@ -1217,7 +1223,7 @@
           <h4>Built <span class="chip k-ok">Green</span></h4>
           <p>Requirements and three stories · two screen specs with eleven numbered states · design
           tokens plus one component · the whole traceability graph (50 IDs, validator green) · the
-          validator and its fourteen checks · the reordered Gate 1 with two accepted decision records
+          validator and its sixteen checks · the reordered Gate 1 with two accepted decision records
           (ADR-003, ADR-004) · persona surfaces for Cursor, opencode and Copilot, generated and
           drift-checked (ADR-005) · the framework packaged so another team can install it — framework-owned files hash-locked, with an install interview that tailors standards and project context to the adopting stack.</p>
         </div>

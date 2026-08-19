@@ -1,7 +1,7 @@
 {
   "name": "aidlc",
   "description": "AI-DLC: seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) driving three CI-enforced delivery gates (Discovery, Delivery, Release) with GitHub-review approvals and a validated traceability graph. Run /aidlc-init to scaffold a repo, /aidlc to start working.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Trigent"
   }

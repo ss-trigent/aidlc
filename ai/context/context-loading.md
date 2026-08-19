@@ -7,7 +7,7 @@
 0. Tier the task first ([`task-classification.md`](task-classification.md)) — the tier sets the budget below
 1. Start from the task's artifact (a story, a BRD section, a PR, an issue)
 2. Follow its ID links one hop upstream (story → its REQs) and to its gate's listed inputs
-3. Load your charter (`ai/roles/`) + the gate doc (`ai/gates/`)
+3. Load your charter (`ai/roles/`) + the gate doc (`ai/gates/`) — in a standalone QA repo there are no gates and no `inception/`: load the charter, `standards/testing-standards.md`, and read the story from the product repo over `gh api`
 4. Load only the standards your task touches (coding for implementation, testing for tests, ...)
 5. Load code only for the modules under change
 

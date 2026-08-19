@@ -92,7 +92,10 @@ node tools/aidlc-jira.mjs --story US-003 --tests     # include a test ticket per
 node tools/aidlc-jira.mjs --story US-003 --apply     # perform the write
 ```
 
-Dry run is the default and needs no credentials, so the exact payload for any ticket can be reviewed in a pull request before it touches a live instance. The tool refuses to write approval-bearing or Jira-owned fields — done transitions, sign-off fields, sprint, assignee, estimate — regardless of what a template or a task instruction asks for. If the tool cannot do what a task needs, that is a change to the tool through a normal PR, not a reason to reach for the API.
+Dry run is the default and needs no credentials, so the exact payload for any ticket can be reviewed in a pull request before it touches a live instance.
+
+**Reads are a different question, and the tempting direction.** A QA engineer holding a ticket key and no story ID needs to get from `LOG-142` to `US-003`. That resolution is a **read**: it goes through the `jira` field recorded in `knowledge/traceability/manifest.json`, and a read-only Jira MCP may fetch the ticket to discover the key. The story text itself always comes from GitHub. A ticket is never a source of requirements — if a key resolves to no story in the manifest, the story is not merged, and the persona stops and says so rather than generating work from ticket prose. Same rule as the table above, applied where people actually bend it.
+ The tool refuses to write approval-bearing or Jira-owned fields — done transitions, sign-off fields, sprint, assignee, estimate — regardless of what a template or a task instruction asks for. If the tool cannot do what a task needs, that is a change to the tool through a normal PR, not a reason to reach for the API.
 
 ## Ticket format
 

@@ -18,7 +18,12 @@
 //   4. listed test files exist and cite every AC of their story (US-###/AC-##)
 //      in the title of an ACTIVE test — citations in comments or skipped tests
 //      (it.skip/xit/describe.skip) are not proof. For a story IN DELIVERY
-//      (branch feat/US-###-*), having no tests at all is an error, not a warning
+//      (branch feat/US-###-*), having no tests at all is an error, not a warning.
+//      Both 3 and 4 read manifest.stories, so the reverse edge is checked too: a
+//      story FILE with no manifest entry is a warning while it is being drafted
+//      and an error once its branch is in delivery — otherwise it would escape
+//      the AC->test gate entirely. A branch naming a story that has no file at
+//      all is always an error
 //   5. spec files citing a US are listed in that story's manifest entry (no stale manifest)
 //   6. product projects (api, ui, graph-engine) declare a test target
 //   7. traceability-matrix.md matches what the manifest generates (no hand edits)
@@ -40,6 +45,16 @@
 //      from tokens.css (the designer's tool-agnostic export) and never hand-edited
 //  13. the per-tool persona surfaces (Cursor, opencode, GitHub Copilot) match
 //      their .claude/ sources (tools/aidlc-build-surfaces.mjs --check, ADR-005)
+//  15. cross-repo e2e evidence (knowledge/traceability/e2e-coverage.json) is
+//      validated when present and IGNORED when absent — a repo keeping its e2e
+//      tests in-repo, or having none, is unaffected. It can never prove that a
+//      remote assertion ran, only that the claim is well-formed and the criterion
+//      exists, which is why a pass must carry the run it came from
+//  16. a spec package present under inception/specs/ is internally honest:
+//      every FR/NFR in spec.md has a traceability row, every cited path exists,
+//      every US/AC it cites is real, it has an index row, and a Gate D1 approval
+//      block is well-formed and matches the plan it approved. An ABSENT package
+//      fails nothing — CI cannot know the tier, and Simple work has none.
 //  14. framework-owned files match ai/framework-lock.json (SHA-256 per file).
 //      Adopting teams edit only project-owned paths (ai/standards/,
 //      ai/templates/jira/); an edited or deleted framework file fails the
@@ -92,6 +107,15 @@ const citesAc = (contents, us, ac) =>
   ).test(contents);
 const SKIPPED_TEST =
   /\b(?:describe|it|test)\.skip\s*\(|\bx(?:it|test|describe)\s*\(/;
+// What counts as a test file, in any stack this framework might be installed in.
+const TEST_FILE = /\.(spec|test)\.[cm]?[jt]sx?$/;
+// ...except this repo's own tool self-tests. They build fixture repositories, so
+// they legitimately contain synthetic US-###/AC-## text that is data, not a
+// citation — reading it as one would make the framework fail its own check 5.
+// They are never shipped to adopting repos (the payload lists tools explicitly),
+// so this exclusion cannot hide a product spec anywhere else.
+const SELF_TEST = /^tools\/aidlc-[^/]*\.test\.mjs$/;
+const isProductSpec = (p) => TEST_FILE.test(p) && !SELF_TEST.test(p);
 
 // Which stories are in delivery right now? Status lives on GitHub, not in files,
 // so this is derived from the branch under review — GITHUB_HEAD_REF on a PR,
@@ -215,6 +239,32 @@ if (manifest) {
     }
     if (entry.stories.length === 0)
       warn(`${req} has no covering story (unscheduled scope)`);
+  }
+
+  // The reverse edge. Checks 3 and 4 iterate manifest.stories, so a story FILE
+  // that nobody added to the manifest was invisible to both: its ACs were never
+  // matched against the file, and no citing test was ever required. On a
+  // delivery branch that meant a green build with zero tests — the precise
+  // outcome check 4 exists to prevent. Escalates like every other incomplete
+  // artifact here (ai/AI-DLC.md): a warning while the story is still being
+  // drafted, a hard error once its own branch is in delivery.
+  for (const us of storyAcs.keys()) {
+    if (stories[us]) continue;
+    if (inDelivery.has(us))
+      err(
+        `${us} is in delivery (branch feat/${us}-*) but has no entry in ${rel(manifestPath)} — add it with its acs[] and tests[], or the AC->test gate cannot see this story at all`,
+      );
+    else
+      warn(
+        `${us} has a story file but no entry in ${rel(manifestPath)} — untraced until the stories PR adds it`,
+      );
+  }
+  // A branch can also name a story that does not exist in the first place.
+  for (const us of inDelivery) {
+    if (!storyAcs.has(us))
+      err(
+        `branch is delivering ${us}, which has no story file in inception/stories/user-stories/ — check the branch name against the approved story`,
+      );
   }
 
   for (const [us, entry] of Object.entries(stories)) {
@@ -452,10 +502,27 @@ if (manifest) {
   }
 
   // ---- 5. reverse link: spec citations must be in the manifest -------------
-  const specs = [
-    ...walk(join(REPO, 'apps'), (p) => p.endsWith('.spec.ts')),
-    ...walk(join(REPO, 'libs'), (p) => p.endsWith('.spec.ts')),
-  ];
+  // Test files are found by asking git, not by assuming a layout: Nx puts them
+  // under apps/ and libs/, a flat repo under src/ or test/, and an e2e layer
+  // wherever `--profile e2e --root` put it. Anything git tracks and names like a
+  // test is a candidate; anything untracked was never the repo's to validate.
+  let specs;
+  try {
+    specs = execFileSync('git', ['ls-files', '-z'], {
+      cwd: REPO,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 1 << 26,
+    })
+      .toString()
+      .split('\0')
+      .filter((p) => p && isProductSpec(p))
+      .map((p) => join(REPO, p))
+      // the index also lists tracked files deleted from the working tree
+      .filter((p) => existsSync(p));
+  } catch {
+    // not a git checkout (a scaffold run before `git init`) — walk instead
+    specs = walk(REPO, (p) => isProductSpec(rel(p)));
+  }
   for (const spec of specs) {
     const cited = new Set(
       [...read(spec).matchAll(/US-\d{3}/g)].map((m) => m[0]),
@@ -764,6 +831,10 @@ const FRAMEWORK_TOOLS = [
   'aidlc-build-plugin.mjs',
   'aidlc-build-surfaces.mjs',
   'aidlc-scaffold.mjs',
+  // Locked for the same reason as aidlc-jira: this file is IMPORTED by check 15
+  // above, so an unlocked copy would let a local edit weaken the gate that reads
+  // it while check 14 reported nothing.
+  'aidlc-qa-coverage.mjs',
 ];
 // read() is CRLF-normalized, so a Windows autocrlf checkout doesn't read as tampering
 const hashFile = (p) => createHash('sha256').update(read(p)).digest('hex');
@@ -833,6 +904,252 @@ if (process.argv.includes('--lock')) {
       err(
         `${r} is not in ai/framework-lock.json — framework-owned paths only hold files the framework ships. Project files belong in ai/standards/ or ai/templates/jira/. Framework maintainers add new framework files with: node tools/aidlc-check.mjs --lock`,
       );
+  }
+}
+
+// ---- 15. cross-repo e2e evidence, if any was published ----------------------
+// Absent file → silent. Not a warning, not a config flag, no requirement: a repo
+// whose e2e tests live in-repo (or that has none) must be entirely unaffected by
+// this check existing. Present → validated strictly, because a file nobody
+// verifies is just somewhere to write green ticks nobody earned.
+//
+// No network, ever: the evidence is a committed file reviewed in a PR, not a
+// fetch. A gate that fails because someone else's artifact host was down is a
+// gate the team learns to re-run instead of read.
+const COVERAGE_PATH = join(
+  REPO,
+  'knowledge',
+  'traceability',
+  'e2e-coverage.json',
+);
+// whether this repo has that commit — checks 15 and 16 both verify claims by SHA
+const reachableSha = (sha) => {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
+      cwd: REPO,
+      stdio: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+if (existsSync(COVERAGE_PATH)) {
+  try {
+    const { validateCoverage } = await import(
+      pathToFileURL(join(REPO, 'tools', 'aidlc-qa-coverage.mjs')).href
+    );
+    const { errors: e, warnings: w } = validateCoverage(
+      JSON.parse(read(COVERAGE_PATH)),
+      storyAcs,
+      reachableSha,
+    );
+    for (const m of e) err(`e2e-coverage.json: ${m}`);
+    for (const m of w) warn(`e2e-coverage.json: ${m}`);
+  } catch (e) {
+    err(`cannot validate e2e-coverage.json: ${e.message}`);
+  }
+}
+
+// ---- 16. development spec packages are internally honest ---------------------
+// Absent package -> silent, for the same reason as check 15: CI cannot know the
+// task's tier, and a Simple-tier change legitimately has no package. Present ->
+// validated, because a traceability table nobody verifies is a place to write
+// requirement IDs that were never implemented.
+const SPECS_DIR = join(REPO, 'inception', 'specs');
+if (existsSync(SPECS_DIR)) {
+  const indexText = existsSync(join(SPECS_DIR, 'index.md'))
+    ? read(join(SPECS_DIR, 'index.md'))
+    : '';
+  // `| FR-01 | ...` — the ID in the first cell of a table row, the same shape
+  // check 1 uses for REQ/NFR/RISK rows in inception/product. Any digit width:
+  // a spec written FR-1 or FR-100 must be traced, not silently exempted.
+  const rowIds = (text, kinds) => {
+    const ids = new Set();
+    for (const line of text.split('\n')) {
+      const m = line.match(new RegExp(`^\\|\\s*((?:${kinds})-\\d+)\\s*\\|`));
+      if (m) ids.add(m[1]);
+    }
+    return ids;
+  };
+  // A shallow clone genuinely cannot see an old commit; a full clone that cannot
+  // see it is looking at an approval that never happened here.
+  const shallowRepo = (() => {
+    try {
+      return (
+        execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+          cwd: REPO,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim() === 'true'
+      );
+    } catch {
+      return true; // not a git checkout — cannot verify either way, stay a warning
+    }
+  })();
+
+  for (const name of readdirSync(SPECS_DIR)) {
+    const pkgDir = join(SPECS_DIR, name);
+    if (name.startsWith('.') || !statSync(pkgDir).isDirectory()) continue;
+    const specPath = join(pkgDir, 'spec.md');
+    if (!existsSync(specPath)) {
+      err(
+        `${rel(pkgDir)}: no spec.md — a spec package's requirements live there`,
+      );
+      continue;
+    }
+    const at = `${rel(pkgDir)}:`;
+    const specText = read(specPath);
+
+    // 1. every FR/NFR in spec.md appears in traceability.md
+    const declared = rowIds(specText, 'FR|NFR');
+    const tracePath = join(pkgDir, 'traceability.md');
+    const traceText = existsSync(tracePath) ? read(tracePath) : '';
+    if (!traceText && declared.size)
+      err(
+        `${at} declares ${declared.size} requirement(s) but has no traceability.md`,
+      );
+    const traced = rowIds(traceText, 'FR|NFR');
+    for (const id of declared)
+      if (!traced.has(id))
+        err(
+          `${at} ${id} is in spec.md but not in traceability.md — every requirement gets a row, even one with status "not started"`,
+        );
+
+    // 2. every path cited in the traceability TABLE resolves. Table rows only:
+    // prose (and a freshly copied template) legitimately mentions paths that are
+    // not claims — `path/to/f.ts` placeholders and globs are not claims either.
+    for (const line of traceText.split('\n')) {
+      if (!line.trimStart().startsWith('|')) continue;
+      for (const m of line.matchAll(/`([^`\s]+\.[a-z0-9]+)`/gi)) {
+        const cited = m[1];
+        if (cited.startsWith('http') || !cited.includes('/')) continue;
+        if (cited.includes('*') || cited.startsWith('path/to/')) continue;
+        if (!existsSync(join(REPO, cited)))
+          err(
+            `${at} traceability.md cites \`${cited}\` which does not exist — a table pointing at a deleted file is a lie, not a record`,
+          );
+      }
+    }
+
+    // 3. every US/AC cited in spec.md resolves
+    for (const us of new Set(
+      [...specText.matchAll(/US-\d{3}/g)].map((x) => x[0]),
+    )) {
+      if (!storyAcs.has(us))
+        err(
+          `${at} spec.md cites ${us} which is not a story in inception/stories/user-stories/`,
+        );
+    }
+    // A bare AC-## is a claim about this package's own story; a qualified
+    // US-###/AC-## is a claim about that story — each is checked against the
+    // story it actually names (same pair format qa-coverage's CITATION parses).
+    const storyOfPkg = name.match(/^US-\d{3}/)?.[0];
+    const seenAc = new Set();
+    for (const m of specText.matchAll(/(?:(US-\d{3})\/)?\b(AC-\d{2})\b/g)) {
+      const owner = m[1] ?? storyOfPkg;
+      if (!owner || !storyAcs.has(owner)) continue; // unknown US already erred above
+      const key = `${owner}/${m[2]}`;
+      if (seenAc.has(key)) continue;
+      seenAc.add(key);
+      if (!storyAcs.get(owner).has(m[2]))
+        err(`${at} spec.md cites ${m[2]} which ${owner} does not define`);
+    }
+
+    // 4. the package has a row in the index
+    if (!indexText.includes(name))
+      err(
+        `${at} no row in inception/specs/index.md — the catalog is how the next developer finds an existing package instead of writing a second one`,
+      );
+
+    // 5-6. the Gate D1 approval block, when the plan carries one. A near-miss —
+    // a heading or Status cell that ALMOST matches — is an error, not a skip: a
+    // gate that silently disables itself on a hand-edit is no gate.
+    const planPath = join(pkgDir, 'implementation-plan.md');
+    if (!existsSync(planPath)) continue;
+    const planText = read(planPath);
+    const APPROVAL_HEAD = /^##\s+Approval\s+—\s+Gate D1\s*$/m;
+    if (!APPROVAL_HEAD.test(planText)) {
+      if (/^##.*\bapproval\b.*gate\s*d1/im.test(planText))
+        err(
+          `${at} implementation-plan.md has an approval-like heading that is not exactly "## Approval — Gate D1" (em dash) — the audit cannot see it, fix the heading`,
+        );
+      continue;
+    }
+    // Fields come from the approval section only — a "| Status |" cell in some
+    // earlier step table must not stand in for the approval's.
+    const section =
+      planText.split(/^(?=##\s)/m).find((s) => APPROVAL_HEAD.test(s)) ?? '';
+    const field = (label) =>
+      section.match(
+        new RegExp(`^\\|\\s*${label}\\s*\\|\\s*(.+?)\\s*\\|`, 'm'),
+      )?.[1] ?? '';
+    const status = field('Status');
+    if (!/^approved$/i.test(status)) {
+      if (/^approved\b/i.test(status))
+        err(
+          `${at} implementation-plan.md approval Status "${status}" is not exactly "approved" — a decorated cell disables the audit, so it is an error`,
+        );
+      continue;
+    }
+    const by = field('Approved by');
+    const on = field('Approved on');
+    const sha = field('Plan commit approved');
+    if (!/@/.test(by))
+      err(
+        `${at} implementation-plan.md is approved but names no approver with an email — Gate D1 records name and email from git config, or asks the human`,
+      );
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on))
+      err(
+        `${at} implementation-plan.md approval date "${on}" is not an ISO date (YYYY-MM-DD)`,
+      );
+    if (!/^[0-9a-f]{7,40}$/.test(sha)) {
+      err(
+        `${at} implementation-plan.md approval records no plan commit — that SHA is what makes the approval verifiable`,
+      );
+    } else if (!reachableSha(sha)) {
+      // Fail closed on a full clone: there, an unreachable SHA is an approval
+      // this repository never saw. CI fetches full history (fetch-depth: 0)
+      // precisely so this branch can be an error rather than a shrug.
+      const msg = `${at} approved plan commit ${sha} is not reachable here — cannot verify the plan is unchanged since approval`;
+      if (shallowRepo) warn(`${msg} (shallow clone — fetch full history to verify)`);
+      else err(msg);
+    } else {
+      let approvedPlan = '';
+      try {
+        approvedPlan = execFileSync(
+          'git',
+          ['show', `${sha}:${rel(planPath)}`],
+          { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+        ).replace(/\r\n/g, '\n');
+      } catch {
+        warn(
+          `${at} implementation-plan.md did not exist at ${sha} — the approved SHA should be the commit the human read`,
+        );
+      }
+      // Compare the plan WITHOUT its approval block: stamping the approval is
+      // itself a change to the file, so a naive diff always differs. Splitting on
+      // headings (rather than a lookahead) keeps this correct when the approval
+      // block is the last section in the file.
+      const strip = (t) =>
+        t
+          .split(/^(?=##\s)/m)
+          .filter((sec) => !/^##\s+Approval\s+—\s+Gate D1/.test(sec))
+          .join('');
+      if (approvedPlan && strip(approvedPlan) !== strip(planText)) {
+        const logPath = join(pkgDir, 'change-log.md');
+        const logText = existsSync(logPath) ? read(logPath) : '';
+        // Only a row dated on/after the approval covers a post-approval edit —
+        // one old row must not license every future edit.
+        const logged = [
+          ...logText.matchAll(/^\|\s*(\d{4}-\d{2}-\d{2})/gm),
+        ].some((x) => x[1] >= on);
+        if (!logged)
+          err(
+            `${at} implementation-plan.md changed after its Gate D1 approval (${sha}) with no change-log.md row dated ${on} or later — see it with: git diff ${sha} -- ${rel(planPath)}`,
+          );
+      }
+    }
   }
 }
 

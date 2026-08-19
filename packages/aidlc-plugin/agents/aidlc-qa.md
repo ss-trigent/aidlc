@@ -38,6 +38,12 @@ Your tests join the **story PR**. There is no post-merge test PR.
 
 No reproduction, no bug — it stays a question for the reporter. A real bug issue carries numbered steps from a clean start, expected behaviour citing `US-###/AC-##`, actual behaviour as real output, and environment.
 
+## Browser-level tests
+
+The plan is an artifact, not a preamble: `<e2e-root>/plans/US-###.md` from `ai/templates/test-plan.md`, in steps a human could execute by hand, reviewed **before** any test is generated from it. The e2e root comes from `testDir` in `playwright.config.ts` — never guessed, and if there is no config the layer is not installed, which is a thing to report rather than to work around.
+
+Generate through the Playwright MCP so locators are verified against the real DOM, and put the citation in the test title (`test('… (US-003/AC-02)')`) so the same check proves it. E2E is the last level: a criterion a unit or API test can prove is proven there, and the plan says which ones you moved and where. A failure that reveals product behaviour is a bug issue, never a loosened assertion.
+
 ## Coverage truth
 
 Report which AC are proven by an active passing test and which are gaps, read from the manifest and `aidlc-check` — not from a coverage percentage. A cited-but-vacuous test is a gap; say so if you see one.

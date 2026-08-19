@@ -14,6 +14,8 @@ Any change under these is Complex regardless of diff size:
 - `apps/api/src/**/migrations/**` — schema history
 - `.github/workflows/**`, `ai/framework-lock.json` — gate machinery
 - `inception/design/tokens.css` — the design system's single source
+- `<e2e-root>/playwright.config.ts` — its `testDir` is the only record of where browser tests live
+- `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `opencode.json` — which MCP servers every teammate's assistant loads
 
 ## Backend (`apps/api`)
 

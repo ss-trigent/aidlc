@@ -1,6 +1,6 @@
 # AI-DLC — AI-Driven Development Lifecycle
 
-A delivery framework where seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) assist their human counterparts through **three CI-enforced gates** (Discovery → Delivery → Release). Approvals are authenticated GitHub PR reviews — never chat text; traceability (`REQ → US → AC → tests`) is validated on every PR by a policy-as-code check. Unlike instruction-only systems (spec-kit, AWS aidlc-workflows), it **enforces outcomes** — see the [full comparison](docs/aidlc-vs-spec-kit.md).
+A delivery framework where seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) assist their human counterparts through **three CI-enforced gates** (Discovery → Delivery → Release). Approvals are authenticated GitHub PR reviews — never chat text, with one named exception ([Gate D1](ai/gates/delivery.md#why-d1-is-not-a-pr-review), the developer's plan review); traceability (`REQ → US → AC → tests`) is validated on every PR by a policy-as-code check. Unlike instruction-only systems (spec-kit, AWS aidlc-workflows), it **enforces outcomes** — see the [full comparison](docs/aidlc-vs-spec-kit.md).
 
 ## Use it in your repo
 
@@ -84,7 +84,7 @@ You may **add** surfaces and named carve-outs; you may not remove or demote a fr
 Two kinds, and only one is yours:
 
 - **Jira templates** (`ai/templates/jira/`) — **yours.** Frontmatter fields plus a Markdown body, `${PLACEHOLDER}` syntax. Two validator rules (check 12): a template may not declare a field that forwards approval or duplicates what Jira owns (`status`, `approval`, `approver`, `signoff`, `sprint`, `assignee`, `storypoints`, `duedate`, …), and every `${PLACEHOLDER}` must be one the tooling knows. Approval lives in a GitHub review; Jira mirrors the work, it never gates it.
-- **Artifact templates** (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `adr.md`, `pr-description.md`) — **framework-owned.** Their shape is what `aidlc-check` validates traceability against, so a local edit breaks the guarantee for everyone. Need a different shape? `change-request` upstream.
+- **Artifact templates** (`ai/templates/brd.md`, `user-story.md`, `screen-spec.md`, `test-plan.md`, `adr.md`, `pr-description.md`) — **framework-owned.** Their shape is what `aidlc-check` validates traceability against, so a local edit breaks the guarantee for everyone. Need a different shape? `change-request` upstream.
 
 ### Optional integrations
 
@@ -100,10 +100,11 @@ Open a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) agai
 | ------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
 | `ai/`                                 | The framework itself: methodology, persona charters, gates, quality bars, templates, reference standards | **source of truth** (hash-locked via `ai/framework-lock.json`) |
 | `.claude/skills/` + `.claude/agents/` | Persona surface sources (skills + delegatable agents)               | **source of truth**                                     |
-| `tools/aidlc-*.mjs`                   | The CI validator, plugin/surface builders, the scaffolder, Jira sync | **source of truth**                                     |
+| `tools/aidlc-*.mjs`                   | The CI validator, plugin/surface builders, the scaffolder, Jira sync, cross-repo e2e evidence | **source of truth**                                     |
 | `packages/aidlc-plugin/`              | The Claude Code plugin (skills + bundled framework payload)         | **generated** — `node tools/aidlc-build-plugin.mjs`     |
 | `.cursor/` `.opencode/` `.github/` persona files | Cursor / opencode / GitHub Copilot surfaces ([ADR-005](knowledge/decisions/ADR-005-multi-tool-persona-surfaces.md)) | **generated** — `node tools/aidlc-build-surfaces.mjs`   |
 | `.claude-plugin/marketplace.json`     | The plugin marketplace this repo hosts                              | hand-maintained                                         |
+| `inception/specs/`                    | Per-story development spec packages — DEV-owned, one folder per story ([ADR-007](knowledge/decisions/ADR-007-dev-spec-packages.md)) | team-owned; the templates and check 16 are framework-owned |
 | `docs/`, `knowledge/decisions/`       | Adoption guide, spec-kit comparison, framework ADRs                 | hand-maintained                                         |
 
 ## Maintaining the framework
