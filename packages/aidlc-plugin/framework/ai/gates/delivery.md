@@ -16,7 +16,7 @@ Approved story (Gate 1 baseline)
 
 ▼ GATE D1 — plan review, IN CHAT. The human reads implementation-plan.md and
   impact-analysis.md and replies `go`. DEV stamps the approval into the plan
-  (name + email from git config, date, approved SHA) and commits it.
+  (name + email from git config, date, approved SHA); the developer commits it.
   Open questions block the `go`.
 
 → [Complex tier, or a design with real trade-offs] Architect persona drafts the design
@@ -60,15 +60,15 @@ Everything for the story rides **one PR**: code, tests, ADR if any, manifest upd
 
 Everywhere else in this framework, approval means an authenticated GitHub review — identity plus commit SHA, not editable text. Gate D1 breaks that on purpose, in one place: a plan review that costs a PR round-trip is a plan review developers learn to route around, and the whole point of D1 is that it happens before any code exists.
 
-What replaces it is partial, and named as such. The stamp in `implementation-plan.md` records the approver's name and email from `git config`, the date, and the SHA of the plan as they read it. The SHA is verifiable — `git diff <sha> -- <plan>` shows whether the plan changed after approval, and check 16 fails a silent change. The name is not: a persona writes the block and `git config` is self-asserted, so this is **attribution, not authentication**. A team that needs the stronger guarantee requests a GitHub review on the same branch — the package is already committed there. Gate D2 is unchanged and still carries merge authority.
+What replaces it is partial, and named as such. The stamp in `implementation-plan.md` records the approver's name and email from `git config`, the date, and the SHA of the plan as they read it. The SHA is verifiable. `git diff <sha> -- <plan>` shows whether the plan changed after approval, and check 16 fails a silent change. The name is not: a persona writes the block and `git config` is self-asserted, so this is **attribution, not authentication**. A team that needs the stronger guarantee requests a GitHub review on the same branch. The package is already committed there. Gate D2 is unchanged and still carries merge authority.
 
 ## Solo policy (the only one)
 
-When one human wears author and reviewer hats: the Architect persona's review becomes **blocking by convention** — its `blocker`/`major` findings must be resolved or explicitly rebutted in the PR thread before self-merge. The self-merge itself is honest and visible: GitHub records who merged. No logged exceptions, no pretend second human. With two+ humans, whoever didn't author reviews — role titles irrelevant.
+When one human wears author and reviewer hats: the Architect persona's review becomes **blocking by convention**. Its `blocker`/`major` findings must be resolved or explicitly rebutted in the PR thread before self-merge. The self-merge itself is honest and visible: GitHub records who merged. No logged exceptions, no pretend second human. With two+ humans, whoever didn't author reviews — role titles irrelevant.
 
 ## Defects
 
-Wrong behavior, found by anyone → **GitHub issue labeled `bug`**: reproduction steps, expected (citing `US-###/AC-##`), actual (real output). No reproduction, no bug — it stays a question for the reporter.
+Wrong behavior, found by anyone → **GitHub issue labeled `bug`**: reproduction steps, expected (citing `US-###/AC-##`), actual (real output). No reproduction, no bug. It stays a question for the reporter.
 
 - Fix PRs (`fix/<issue#>-<slug>`) **must add a regression test citing the issue** (`(#12)` in the test name) — reviewer rejects otherwise.
 - If investigation shows the _requirement_ is wrong → relabel `change-request`, route to Gate 1.
