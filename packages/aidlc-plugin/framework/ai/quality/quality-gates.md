@@ -1,6 +1,6 @@
 # Quality gates
 
-Three gates, each answering one question, each approved by an authenticated GitHub action — full definitions in `ai/gates/`:
+Three gates, each answering one question, each approved by an authenticated GitHub action. Full definitions in `ai/gates/`:
 
 | Gate        | Question         | Approval                     | Enforced by                                             |
 | ----------- | ---------------- | ---------------------------- | ------------------------------------------------------- |
@@ -14,7 +14,7 @@ A gate rule exists only if something checks it:
 
 - **`aidlc-check`** (required CI status): ID uniqueness, bidirectional traceability via `manifest.json`, AC→test coverage, test-target presence, plugin payload drift, and — only when a separate QA repo published it — the cross-repo e2e evidence file. The full numbered list is in the header of `tools/aidlc-check.mjs`; that file is the contract, this line is the summary
 - **Branch protection on `main`**: required statuses + human review; no direct pushes
-- **GitHub identity**: who approved what, against which commit SHA — never an editable header
+- **GitHub identity**: who approved what, against which commit SHA, never an editable header
 
 Anything not covered by those is _advice to humans_, and the docs say so rather than pretending.
 
@@ -24,4 +24,4 @@ One policy, defined once in [gates/delivery.md](../gates/delivery.md) §Solo: AI
 
 ## Review checklist
 
-[review-checklist.md](review-checklist.md) is the shared checklist for DEV self-review and Architect advisory review — unchanged in spirit: correctness → architecture → security → performance → accessibility → practices → clean code, findings rated `blocker/major/minor/nit`.
+[review-checklist.md](review-checklist.md) is the shared checklist for DEV self-review and Architect advisory review, unchanged in spirit: correctness → architecture → security → performance → accessibility → practices → clean code, findings rated `blocker/major/minor/nit`.

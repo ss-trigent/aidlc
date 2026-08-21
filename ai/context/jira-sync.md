@@ -25,7 +25,7 @@ Approval  ───────────────────────�
 
 **Approval never travels.** A ticket transitioned to Done, a sign-off field, a comment saying "approved" — none of these constitute a gate approval. Gate approval is a GitHub pull-request review bound to a commit SHA. If a ticket says approved and no GitHub review exists, the work is **not** approved, and a persona asked to proceed on that basis must say so plainly and stop.
 
-The reason is identity, not preference. A pull-request review authenticates who approved exactly which bytes. A ticket field authenticates nothing once it has crossed an integration boundary — it can be set by an automation, a bulk edit, or anyone with edit rights, and _what_ was approved is no longer recoverable. That is the single thing this framework cannot forward through an integration.
+The reason is identity, not preference. A pull-request review authenticates who approved exactly which bytes. A ticket field authenticates nothing once it has crossed an integration boundary. It can be set by an automation, a bulk edit, or anyone with edit rights, and _what_ was approved is no longer recoverable. That is the single thing this framework cannot forward through an integration.
 
 ## Writing for a client
 
@@ -66,7 +66,7 @@ AC-02 in the story  →  test ticket "US-003/AC-02 — Leg detail expanded"
 
 Rules:
 
-- **A result is only ever written from a real run.** No manual pass. If a criterion has no automated test yet, the ticket says `Not yet automated` — which is honest and, unlike a green tick nobody earned, actionable.
+- **A result is only ever written from a real run.** No manual pass. If a criterion has no automated test yet, the ticket says `Not yet automated`, which is honest and, unlike a green tick nobody earned, actionable.
 - **The test name is the identifier.** `aidlc-check` already proves every criterion is cited in an active test, so the ticket and the code cannot drift apart without CI noticing.
 - **A failing test is never re-marked as passing in Jira.** The fix is a fix.
 
@@ -80,7 +80,7 @@ Rules:
 | `/ux`, `/dev`, `/devops` | Read only — route ticket work to the personas above                     |
 | `/architect`             | **Read only, always**                                                   |
 
-**A note on the two advisory personas.** `/architect` and `/manager` are read-only _in this repository_ by tooling — their agents disallow `Write` and `Edit`. That guarantee covers files, **not external systems**: a write-capable Jira tool is not the `Write` tool, so the existing restriction does not reach it. `/manager` writing tracking status to Jira is inside its charter — it reports, it does not author product state. `/architect` writing anything to Jira is not, and that limit is a charter rule rather than a tool restriction, stated plainly rather than pretended to be enforced.
+**A note on the two advisory personas.** `/architect` and `/manager` are read-only _in this repository_ by tooling. Their agents disallow `Write` and `Edit`. That guarantee covers files, **not external systems**: a write-capable Jira tool is not the `Write` tool, so the existing restriction does not reach it. `/manager` writing tracking status to Jira is inside its charter. It reports, it does not author product state. `/architect` writing anything to Jira is not, and that limit is a charter rule rather than a tool restriction, stated plainly rather than pretended to be enforced.
 
 ## How a persona writes to Jira
 
@@ -94,12 +94,12 @@ node tools/aidlc-jira.mjs --story US-003 --apply     # perform the write
 
 Dry run is the default and needs no credentials, so the exact payload for any ticket can be reviewed in a pull request before it touches a live instance.
 
-**Reads are a different question, and the tempting direction.** A QA engineer holding a ticket key and no story ID needs to get from `LOG-142` to `US-003`. That resolution is a **read**: it goes through the `jira` field recorded in `knowledge/traceability/manifest.json`, and a read-only Jira MCP may fetch the ticket to discover the key. The story text itself always comes from GitHub. A ticket is never a source of requirements — if a key resolves to no story in the manifest, the story is not merged, and the persona stops and says so rather than generating work from ticket prose. Same rule as the table above, applied where people actually bend it.
+**Reads are a different question, and the tempting direction.** A QA engineer holding a ticket key and no story ID needs to get from `LOG-142` to `US-003`. That resolution is a **read**: it goes through the `jira` field recorded in `knowledge/traceability/manifest.json`, and a read-only Jira MCP may fetch the ticket to discover the key. The story text itself always comes from GitHub. A ticket is never a source of requirements. If a key resolves to no story in the manifest, the story is not merged, and the persona stops and says so rather than generating work from ticket prose. Same rule as the table above, applied where people actually bend it.
  The tool refuses to write approval-bearing or Jira-owned fields — done transitions, sign-off fields, sprint, assignee, estimate — regardless of what a template or a task instruction asks for. If the tool cannot do what a task needs, that is a change to the tool through a normal PR, not a reason to reach for the API.
 
 ## Ticket format
 
-Templates are authored in **Markdown**. Jira accepts none — the Cloud editor's apparent Markdown support is it converting as you type. The tool converts at the API boundary:
+Templates are authored in **Markdown**. Jira accepts none. The Cloud editor's apparent Markdown support is it converting as you type. The tool converts at the API boundary:
 
 - `--api v3` (default) → **Atlassian Document Format**, the JSON structure Jira Cloud stores rich text in
 - `--api v2` → **wiki markup**, for Jira Server / Data Center
@@ -127,7 +127,7 @@ A ticket key is recorded on the artifact it tracks, in `knowledge/traceability/m
 "US-003": { "...": "...", "jira": "LOG-142" }
 ```
 
-`aidlc-check` validates the key's shape and that it matches `JIRA_PROJECT_KEY` when that is set. The key is a **convenience edge for humans**, not a governance edge: no gate depends on it, and a missing key is a warning. **Jira going away must never break the build** — that is the test of whether this integration stayed in its lane.
+`aidlc-check` validates the key's shape and that it matches `JIRA_PROJECT_KEY` when that is set. The key is a **convenience edge for humans**, not a governance edge: no gate depends on it, and a missing key is a warning. **Jira going away must never break the build.** That is the test of whether this integration stayed in its lane.
 
 ## When Jira and GitHub disagree
 

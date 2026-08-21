@@ -10,7 +10,7 @@
 | Pipeline / CI                  | `ci/<slug>`                       |
 | Refactor / chore               | `refactor/<slug>`, `chore/<slug>` |
 
-Never commit directly to `main` — branch protection enforces it.
+Never commit directly to `main`. Branch protection enforces it.
 
 ## Commits — conventional commits + artifact IDs
 

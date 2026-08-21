@@ -1,6 +1,6 @@
 # Jira ticket templates
 
-Templates a persona fills in to create or update a Jira ticket. Rules that govern _when_ and _whether_ to write live in [`ai/context/jira-sync.md`](../../context/jira-sync.md) — read that first; it is binding.
+Templates a persona fills in to create or update a Jira ticket. Rules that govern _when_ and _whether_ to write live in [`ai/context/jira-sync.md`](../../context/jira-sync.md). Read that first; it is binding.
 
 **Why these exist:** not everyone who needs to follow the work has repository access. The Jira board is how a client, a manager, or a tester sees what the team is doing. These templates make those tickets consistent and readable by someone who will never open a pull request.
 
@@ -18,7 +18,7 @@ Templates a persona fills in to create or update a Jira ticket. Rules that gover
 
 Each file is frontmatter (the Jira fields) plus a body written in **ordinary Markdown**.
 
-Placeholders use `${NAME}` — not `{{NAME}}`, which is monospace in Jira wiki markup.
+Placeholders use `${NAME}`, not `{{NAME}}`, which is monospace in Jira wiki markup.
 
 ```
 ---
@@ -41,7 +41,7 @@ ${STORY_STATEMENT}
 
 So templates are authored in Markdown and `tools/aidlc-jira.mjs` converts at the API boundary. That keeps the format question in one function instead of five files, lets prettier format these files like any other Markdown, and means switching instance type is a flag rather than a rewrite.
 
-Supported Markdown: headings, paragraphs, bullet lists, block quotes, pipe tables, thematic rules, and inline `**bold**`, `_italic_`, `` `code` ``, `[text](url)`. That is the whole subset the templates need — anything richer would not survive both targets.
+Supported Markdown: headings, paragraphs, bullet lists, block quotes, pipe tables, thematic rules, and inline `**bold**`, `_italic_`, `` `code` ``, `[text](url)`. That is the whole subset the templates need. Anything richer would not survive both targets.
 
 Fill them with the tool, never by hand:
 
@@ -98,9 +98,9 @@ Every placeholder any template uses. The tool fails loudly on an unknown one rat
 These are client-facing, so treat a change like a change to product copy:
 
 - Plain language in the description. Implementation detail belongs in a comment, not here.
-- Markdown only, and only the subset above. `aidlc-check` rejects wiki markup left in a template — it would be double-converted and reach a client as noise.
+- Markdown only, and only the subset above. `aidlc-check` rejects wiki markup left in a template. It would be double-converted and reach a client as noise.
 - Never add a field that carries approval or sign-off. The tool refuses to write those, and a template implying otherwise is misleading.
 - Never add sprint, assignee, or estimate. Jira owns those; the repository does not model them.
-- Keep the deep links — a ticket that cannot be traced back to its artifact is where drift starts.
+- Keep the deep links. A ticket that cannot be traced back to its artifact is where drift starts.
 
 `aidlc-check` verifies every template parses, that its placeholders are all known, and that none of them reaches for a forbidden field.

@@ -14,7 +14,7 @@ The persona commands (`/ba`, `/ux`, `/dev`, …) exist only as Claude Code surfa
 
 Three facts make this cheap rather than a rewrite:
 
-1. The charters in `ai/roles/` are deliberately tool-agnostic — the Claude surfaces are thin wrappers that defer to them.
+1. The charters in `ai/roles/` are deliberately tool-agnostic. The Claude surfaces are thin wrappers that defer to them.
 2. All three target tools read the same **Agent Skills** format (`skills/<name>/SKILL.md`) that Claude Code uses, and each has a typed-command surface (`.cursor/commands/`, `.opencode/commands/`, `.github/prompts/`) and an agent surface (`.cursor/agents/`, `.opencode/agents/`, `.github/agents/`).
 3. This repo already carries that layout: the Nx tooling scaffolds its own skills into all four tools' directories.
 
@@ -31,9 +31,9 @@ Two invariants were at stake:
 
 2. **Enforcement parity is uneven, and recorded rather than pretended.** The read-only guarantee survives at tool level on **opencode** (`tools: write/edit: false` in the agent frontmatter). **Cursor** and **Copilot** have no per-agent tool restriction, so their Architect and Manager surfaces carry an injected read-only notice — a charter rule, not a tool restriction, exactly the class of limit the framework already states plainly for Jira and for merge authority. Check 10 (the `.claude` agents' `disallowedTools`) is unchanged and still guards the strongest surface.
 
-3. **ADR-001's "Anthropic-only" is scoped to what it actually decided:** one primary assistant, one audit trail, and no multi-vendor *orchestration stack* (no Codex/LangGraph/etc. as framework components). It did not — and after this ADR explicitly does not — forbid a team member's editor from executing the tool-agnostic charters. The accepted cost: work drafted in Cursor/opencode/Copilot is produced by whatever model that tool runs, so "one model vendor" no longer describes drafting. It still describes the framework's own tooling, and the enforcement spine (GitHub reviews + `aidlc-check`) is model-independent by design — which is the real guarantee.
+3. **ADR-001's "Anthropic-only" is scoped to what it actually decided:** one primary assistant, one audit trail, and no multi-vendor *orchestration stack* (no Codex/LangGraph/etc. as framework components). It did not, and after this ADR explicitly does not, forbid a team member's editor from executing the tool-agnostic charters. The accepted cost: work drafted in Cursor/opencode/Copilot is produced by whatever model that tool runs, so "one model vendor" no longer describes drafting. It still describes the framework's own tooling, and the enforcement spine (GitHub reviews + `aidlc-check`) is model-independent by design, which is the real guarantee.
 
-4. **The Claude Code plugin ships the generator** (`framework/tools/aidlc-build-surfaces.mjs`) so adopting repos can emit the same surfaces; wiring it into `/aidlc-init` is deferred until someone asks. *(Since done: `/aidlc-init` now drives the deterministic scaffolder `tools/aidlc-scaffold.mjs`, which pins the personas and generates all editor surfaces in adopting repos — also runnable without Claude Code via `npx github:ss-trigent/aidlc`.)*
+4. **The Claude Code plugin ships the generator** (`framework/tools/aidlc-build-surfaces.mjs`) so adopting repos can emit the same surfaces; wiring it into `/aidlc-init` is deferred until someone asks. *(Since done: `/aidlc-init` now drives the deterministic scaffolder `tools/aidlc-scaffold.mjs`, which pins the personas and generates all editor surfaces in adopting repos, also runnable without Claude Code via `npx github:ss-trigent/aidlc`.)*
 
 ## Alternatives considered
 
@@ -48,4 +48,4 @@ Two invariants were at stake:
 
 - `/ba`, `/ux`, `/architect`, `/dev`, `/qa`, `/devops`, `/manager`, `/aidlc` are typeable in Claude Code, Cursor, opencode and Copilot Chat; `aidlc-*` agents are delegatable in Claude Code, Cursor, opencode and Copilot.
 - Editing a persona means editing `.claude/skills|agents` (or the charter) and running `node tools/aidlc-build-surfaces.mjs`; CI rejects a PR that edits a generated file directly.
-- The read-only guarantee is tool-enforced on Claude Code and opencode, charter-enforced on Cursor and Copilot — stated in `ai/integrations.md`.
+- The read-only guarantee is tool-enforced on Claude Code and opencode, charter-enforced on Cursor and Copilot, stated in `ai/integrations.md`.

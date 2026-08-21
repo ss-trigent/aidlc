@@ -22,7 +22,7 @@ ${AC_BODY}
 
 An automated test carries this criterion's identifier in its name, so the test and the criterion cannot drift apart without the build noticing. The result above is filled from a real pipeline run.
 
-**Not yet automated** means exactly that — no test exists for this criterion yet. It is never a substitute for a pass.
+**Not yet automated** means exactly that: no test exists for this criterion yet. It is never a substitute for a pass.
 
 ---
 

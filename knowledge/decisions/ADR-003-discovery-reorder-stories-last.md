@@ -21,8 +21,8 @@ The intent is to stop stories from being written against scope that is still mov
 
 Two things had to be settled before this could be implemented:
 
-1. **Wireframes.** Do they become repository artifacts? **No** — settled with the stakeholder and consistent with [ADR-002](ADR-002-jira-tracking-flow.md) and `inception/design/README.md`: the repo holds the **screen spec** (`SCR-###`/`ST-##`) and tokens; the designer prototypes the wireframes in Figma/Penpot/etc., and frames are never checked in. So "design" here means the spec, which the reorder already supports.
-2. **The orphan-screen rule.** Drafting stories _last_ means screens are approved (step 2) while no story exists yet. Under the old model that screen fails CI as an orphan. The reorder is therefore **not** a pure charter change — the data model assumed the story existed first.
+1. **Wireframes.** Do they become repository artifacts? **No.** Settled with the stakeholder and consistent with [ADR-002](ADR-002-jira-tracking-flow.md) and `inception/design/README.md`: the repo holds the **screen spec** (`SCR-###`/`ST-##`) and tokens; the designer prototypes the wireframes in Figma/Penpot/etc., and frames are never checked in. So "design" here means the spec, which the reorder already supports.
+2. **The orphan-screen rule.** Drafting stories _last_ means screens are approved (step 2) while no story exists yet. Under the old model that screen fails CI as an orphan. The reorder is therefore **not** a pure charter change. The data model assumed the story existed first.
 
 ## Decision
 
@@ -30,7 +30,7 @@ Two things had to be settled before this could be implemented:
 
 1. **Three ordered steps.** (1) BA freezes requirements (BRD PR). (2) UX designs `SCR-###` screens from the approved requirements and hands the specs + tokens to the designer to prototype (design PR). (3) BA slices INVEST stories citing the frozen requirements and the already-approved screens (stories PR). Each merge is that step's scope baseline; the stories merge is the locked scope Gate 2 builds against.
 
-2. **Screen → requirement edge.** A screen node gains an optional `requirements[]`, mirrored by an optional `screens[]` on the requirement node — the same bidirectional shape as every other edge. A screen is now an orphan (hard CI error) only when it traces to **neither** a story **nor** a requirement. The principle is unchanged — a screen must trace to _something_ — but during design that something is the requirement, and the `US ↔ SCR` edge is added in step 3.
+2. **Screen → requirement edge.** A screen node gains an optional `requirements[]`, mirrored by an optional `screens[]` on the requirement node, the same bidirectional shape as every other edge. A screen is now an orphan (hard CI error) only when it traces to **neither** a story **nor** a requirement. The principle is unchanged — a screen must trace to _something_ — but during design that something is the requirement, and the `US ↔ SCR` edge is added in step 3.
 
 3. **Enforcement is charter convention, not a new gate check.** `/ux` refuses to design without approved requirements; `/ba` refuses to draft stories until design is approved. `aidlc-check` keeps only the checks it always had — every cited artifact must resolve, bidirectionally — and does **not** turn a premature story into a red build. This was a deliberate choice over a hard "requirements-and-screens-must-be-on-`main`-first" precondition: the guarantee lives in the personas and the human review, matching the framework's preference for the lightest mechanism that holds.
 
@@ -51,7 +51,7 @@ Two things had to be settled before this could be implemented:
 
 **Harder / accepted costs.**
 
-- **The order is charter-only, not CI-blocked.** A persona — or a human editing files directly — could write a story before design is approved, and only review would catch it. Stated plainly rather than pretended, the same way the "no persona may merge" limit is a charter rule, not a tool lock.
+- **The order is charter-only, not CI-blocked.** A persona, or a human editing files directly, could write a story before design is approved, and only review would catch it. Stated plainly rather than pretended, the same way the "no persona may merge" limit is a charter rule, not a tool lock.
 - **Three PRs where there was one.** More review touchpoints for a small feature. Mitigation: the steps can each be fast, and a feature with no UI simply has no step 2.
-- **A screen now has two ways to be legitimate.** Reviewers (and future validator work) must not read an empty `stories[]` during the design phase as a bug — it is expected until step 3. The manifest `$comment` and the design README both say so.
+- **A screen now has two ways to be legitimate.** Reviewers (and future validator work) must not read an empty `stories[]` during the design phase as a bug. It is expected until step 3. The manifest `$comment` and the design README both say so.
 - **Scope of this ADR is the reorder and the `SCR → REQ` edge only.** The architect's notes also propose two-phase (structural then themed) design sign-off, DB/architecture as parallel Inception work, a delivery-planning stage, and Playwright-by-QA. None of those is decided here; each remains an open decision in the source input file.

@@ -10,7 +10,7 @@
 
 ## Surfaces crossed
 
-Name the classification surface, not a vague area — the five are in `ai/context/task-classification.md`.
+Name the classification surface, not a vague area. The five are in `ai/context/task-classification.md`.
 
 | Surface                  | Crossed? | What exactly                                    |
 | ------------------------ | -------- | ----------------------------------------------- |

@@ -8,7 +8,7 @@ Keep the path from merge to production automated, observable, and boring: CI req
 
 ## How the human works with me
 
-- They describe the need ("CI must run aidlc-check", "prep a release"); I design and write it, they review the PR like any code — checking the things I get wrong: cache keys (wrong keys = green-but-stale), secret hygiene (grep my YAML for anything value-shaped), and runtime budget honesty.
+- They describe the need ("CI must run aidlc-check", "prep a release"); I design and write it, they review the PR like any code, checking the things I get wrong: cache keys (wrong keys = green-but-stale), secret hygiene (grep my YAML for anything value-shaped), and runtime budget honesty.
 - Promotions: the pipeline pauses at each environment; **the approval is them**, in GitHub's environment approval UI, after smoke test + scan are green and the rollback plan is confirmed current.
 - Red `main` outranks everything. I diagnose (logs, last-green diff) and recommend revert vs fix-forward; the decision is theirs.
 
@@ -30,7 +30,7 @@ Keep the path from merge to production automated, observable, and boring: CI req
 
 - Nx affected commands so CI cost scales with the change (`npm run affected:*`)
 - `aidlc-check` and the test suite are required statuses — never made optional to unblock
-- Secrets by **name** only (GitHub Secrets); values never in code, logs, YAML, or my output — a draft asking for credential values is a red flag to report
+- Secrets by **name** only (GitHub Secrets); values never in code, logs, YAML, or my output. A draft asking for credential values is a red flag to report
 - Every deploy stage ships with a rehearsed rollback note or it fails the gate
 - No out-of-band environment changes — snowflakes melt in production
 - Anything costing money escalates before it exists

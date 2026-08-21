@@ -37,4 +37,4 @@ ${OPEN_QUESTIONS}
 | Specification | [${STORY_ID}](${ARTIFACT_URL}) |
 | Change record | ${PR_URL}                      |
 
-_Tracked automatically from the team's repository. The specification linked above is the authoritative version — this ticket is the shared view of it. Approval happens in the change record, not on this ticket._
+_Tracked automatically from the team's repository. The specification linked above is the authoritative version; this ticket is the shared view of it. Approval happens in the change record, not on this ticket._

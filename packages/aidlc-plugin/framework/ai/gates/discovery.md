@@ -2,13 +2,13 @@
 
 **Question:** are we building the right thing?
 **Personas:** [BA](../roles/ba.md) drafts requirements, then stories · [UX](../roles/ux.md) drafts screens (structure, then styling) · [Architect](../roles/architect.md) drafts the architecture (parallel, advisory) · [Manager](../roles/manager.md) proposes the delivery plan (advisory)
-**Approvers:** PO/BA human · the designer (screen structure) · the product team (styling) — all via GitHub PR review
+**Approvers:** PO/BA human · the designer (screen structure) · the product team (styling), all via GitHub PR review
 **Cadence:** once per feature/epic; reopened by accepted change requests
 
 ## Flow
 
 Discovery runs in three ordered steps, each its own PR whose merge is the step's
-exit — **scope is locked left to right**, and stories are drafted last so they
+exit. **Scope is locked left to right**, and stories are drafted last so they
 describe a product whose requirements and screens are already settled ([ADR-003](../../knowledge/decisions/ADR-003-discovery-reorder-stories-last.md)):
 
 ```
@@ -52,9 +52,9 @@ the stories merge is the locked scope that Gate 2 builds against. Steps 4 and
 ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 ```
 
-**Two crafts, one gate, one order.** The BA decides what the product must do; UX decides what the user sees and does. They no longer share a PR: requirements freeze, then design freezes, and stories are written against both — a story is not drafted until the scope it describes can no longer move underneath it. A screen spec that needs an unwritten business rule is a BA open question that reopens step 1, never a UX invention — and a story with UI cites a screen that already exists rather than promising one.
+**Two crafts, one gate, one order.** The BA decides what the product must do; UX decides what the user sees and does. They no longer share a PR: requirements freeze, then design freezes, and stories are written against both. A story is not drafted until the scope it describes can no longer move underneath it. A screen spec that needs an unwritten business rule is a BA open question that reopens step 1, never a UX invention, and a story with UI cites a screen that already exists rather than promising one.
 
-**The order is charter-enforced, not CI-blocked.** The personas refuse to run ahead — `/ux` will not design without approved requirements, `/ba` will not draft stories until design is approved. CI keeps only the checks it always had (every cited artifact must resolve, bidirectionally); it does not turn a premature story into a red build. That was a deliberate choice ([ADR-003](../../knowledge/decisions/ADR-003-discovery-reorder-stories-last.md)) — the guarantee lives in the personas and the human review, not a new gate.
+**The order is charter-enforced, not CI-blocked.** The personas refuse to run ahead. `/ux` will not design without approved requirements, `/ba` will not draft stories until design is approved. CI keeps only the checks it always had (every cited artifact must resolve, bidirectionally); it does not turn a premature story into a red build. That was a deliberate choice ([ADR-003](../../knowledge/decisions/ADR-003-discovery-reorder-stories-last.md)). The guarantee lives in the personas and the human review, not a new gate.
 
 ## What each step's PR must contain
 
@@ -65,7 +65,7 @@ ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 
 **Step 2 — design PR**
 
-- `inception/design/screens/SCR-###-<slug>.md` for each requirement that needs UI — purpose, layout, numbered `ST-##` states (default/loading/empty/error at minimum), components, accessibility, structural decisions with rationale, and a conflicts table that blocks sign-off while any row is open. The spec cites the `REQ-###`/`NFR-###` it serves — not a story, which does not exist yet.
+- `inception/design/screens/SCR-###-<slug>.md` for each requirement that needs UI — purpose, layout, numbered `ST-##` states (default/loading/empty/error at minimum), components, accessibility, structural decisions with rationale, and a conflicts table that blocks sign-off while any row is open. The spec cites the `REQ-###`/`NFR-###` it serves, not a story, which does not exist yet.
 - `inception/design/tokens.css` when the design system changes; `tokens.json` regenerated with `node tools/aidlc-check.mjs --write`
 - `knowledge/traceability/manifest.json` — the `screens` nodes with `requirements[]`, mirrored by `screens[]` on each cited requirement (`aidlc-check` fails a screen that traces to neither a story nor a requirement)
 
@@ -73,7 +73,7 @@ ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 
 - `inception/stories/user-stories/US-###-<slug>.md` — INVEST stories, each citing its REQs, with numbered Given/When/Then `AC-##`, edge cases, and — if the story has UI — the already-approved `SCR-###` screen that serves it
 - `inception/stories/epics/` entry when stories form an epic
-- `knowledge/traceability/manifest.json` updated (REQ ↔ US links, and the US ↔ SCR edge added onto the screen approved in step 2) — `aidlc-check` fails the PR otherwise
+- `knowledge/traceability/manifest.json` updated (REQ ↔ US links, and the US ↔ SCR edge added onto the screen approved in step 2). `aidlc-check` fails the PR otherwise
 
 **Parallel — architecture PR (advisory, non-blocking)**
 
@@ -81,7 +81,7 @@ ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 
 **Step 4 — delivery plan (advisory, no repo artifact)**
 
-- The Manager proposes estimates, a two-week-sprint grouping, and a shareable report from the merged requirements + stories. The human decides the numbers and locks the plan in Jira (which owns sprints/estimates per [ADR-002](../../knowledge/decisions/ADR-002-jira-tracking-flow.md)) — nothing is checked into the repo, and this step gates nothing.
+- The Manager proposes estimates, a two-week-sprint grouping, and a shareable report from the merged requirements + stories. The human decides the numbers and locks the plan in Jira (which owns sprints/estimates per [ADR-002](../../knowledge/decisions/ADR-002-jira-tracking-flow.md)). Nothing is checked into the repo, and this step gates nothing.
 
 ## Gate checks
 

@@ -4,7 +4,7 @@
 
 ## The prime rule
 
-The human should never need to: read framework files, copy-paste prompts, know file paths, know artifact ID schemes, or understand git. If your instructions to them contain a file path or an ID they haven't seen, you've failed the rule — translate it.
+The human should never need to: read framework files, copy-paste prompts, know file paths, know artifact ID schemes, or understand git. If your instructions to them contain a file path or an ID they haven't seen, you've failed the rule. Translate it.
 
 ## Interview, don't intake
 
@@ -27,7 +27,7 @@ The human should never need to: read framework files, copy-paste prompts, know f
 ## Approvals, guided
 
 - **Never ask someone to approve a file — present a review packet first:** the full content walked through in conversation, section by section, in plain language: what it says, what you decided on their behalf (with defaults marked), what's still open. Raw markdown in a git repo is not a readable format for a non-technical approver; the conversation is the reading experience, the PR is the record
-- **Approval is a GitHub review, never chat text.** You prepare the PR and hand them the link; they click _Approve_ (and _Merge_) in the GitHub web UI — that authenticates who approved exactly what. Walk them through those two clicks the first time; it's the only GitHub they ever need
+- **Approval is a GitHub review, never chat text.** You prepare the PR and hand them the link; they click _Approve_ (and _Merge_) in the GitHub web UI. That authenticates who approved exactly what. Walk them through those two clicks the first time; it's the only GitHub they ever need
 - **One exception, named:** Gate **D1** in the development cycle — the human approves the written implementation plan in chat, because a PR round-trip before any code exists is a review developers learn to route around. DEV then stamps their name, the date, and the SHA of the plan they read into the plan file. That is attribution, not authentication, and [`ai/gates/delivery.md`](../gates/delivery.md) says so in those words. Every other approval in this framework, including Gate D2, is a GitHub review
 - Never approve, merge, or click anything on their behalf. Your job ends at the link + the walkthrough
 - If they hesitate, split the decision: ship the solid parts in this PR, park the open ones as tracked questions (or a follow-up issue)
@@ -36,8 +36,8 @@ The human should never need to: read framework files, copy-paste prompts, know f
 
 - End every session by telling them what happens next and who's up, in people terms: _"Next, your architect reviews these three stories — they just need to type `/architect` and it'll pick up from here."_
 - If the next step is theirs, give them the single next action, not a list
-- Changes and bugs: they describe the problem in plain words; you file the GitHub issue (label `change-request` or `bug`) and read them back what you filed — they never need to know the labels exist
+- Changes and bugs: they describe the problem in plain words; you file the GitHub issue (label `change-request` or `bug`) and read them back what you filed. They never need to know the labels exist
 
 ## For the technical personas too
 
-DEV/Architect/DevOps humans are technical, but the same rules apply scaled: don't make them memorize the framework — surface the right checklist item, template, or standard at the moment it's needed.
+DEV/Architect/DevOps humans are technical, but the same rules apply scaled: don't make them memorize the framework. Surface the right checklist item, template, or standard at the moment it's needed.

@@ -6,4 +6,4 @@
 | ---------- | -------------------------------------- | ---------------------- | ---------------------------- |
 | YYYY-MM-DD | <what changed in the spec or the plan> | <what prompted it>     | FR-03 added, FR-01 reworded  |
 
-A plan edited after its Gate D1 approval **must** have a row here **dated on or after the approval date** — check 16 compares the plan against the approved SHA and fails a silent change; an older row does not cover a newer edit.
+A plan edited after its Gate D1 approval **must** have a row here **dated on or after the approval date**. Check 16 compares the plan against the approved SHA and fails a silent change; an older row does not cover a newer edit.

@@ -14,14 +14,14 @@ The framework proved acceptance criteria only with in-repo tests: check 4 reads 
 
 Four facts shaped the decision:
 
-1. **Playwright already ships the agentic loop.** `npx playwright init-agents` generates planner/generator/healer agents. Its loops are `vscode`, `claude` and `opencode` — **there is no Cursor loop**, and half the team uses Cursor. So the feature could be reused in spirit but not depended on.
+1. **Playwright already ships the agentic loop.** `npx playwright init-agents` generates planner/generator/healer agents. Its loops are `vscode`, `claude` and `opencode`. **There is no Cursor loop**, and half the team uses Cursor. So the feature could be reused in spirit but not depended on.
 2. **A plan is the reviewable artifact, not the test.** A generated Playwright test is hard to review against a criterion; numbered steps a human could execute by hand are not. The cheap moment to catch "this tests something adjacent to the criterion" is before the test exists.
-3. **The requirement is the only honest input.** Playwright's own planner explores a running app to invent scenarios. Deriving scenarios from the app is deriving them from the implementation — the thing `ai/roles/qa.md` exists to prevent.
+3. **The requirement is the only honest input.** Playwright's own planner explores a running app to invent scenarios. Deriving scenarios from the app is deriving them from the implementation, the thing `ai/roles/qa.md` exists to prevent.
 4. **Check 5 already assumed a layout.** It walked `apps/` and `libs/` for `*.spec.ts`, an Nx assumption in a framework-owned tool. Any other layout had its citations silently unvalidated, so "put the e2e tests in the Nx place" would have been a convention masquerading as a guarantee.
 
 Two invariants were at stake:
 
-- **`ai/integrations.md`'s "MCP servers — read-only context only".** Playwright MCP drives a browser: it writes to a running application. That position had to be scoped, not silently contradicted — and that file itself says adding a write-capable MCP server "is a decision that belongs in an ADR".
+- **`ai/integrations.md`'s "MCP servers — read-only context only".** Playwright MCP drives a browser: it writes to a running application. That position had to be scoped, not silently contradicted, and that file itself says adding a write-capable MCP server "is a decision that belongs in an ADR".
 - **ADR-001's Anthropic-only toolchain and zero-hard-dependency posture.** Playwright is the first external runtime the framework tells a team to install.
 
 ## Decision
@@ -30,10 +30,10 @@ Two invariants were at stake:
 
 1. **Plan before test.** `<e2e-root>/plans/US-###.md` (`ai/templates/test-plan.md`) is written from the story's criteria and approved in its own PR before any test is generated. One plan per story, named after it — **no new ID series**, because the plan is 1:1 with its story and a second counter would only be a thing to keep in sync.
 2. **Two topologies, same-repo default.** Same repo: the spec path goes in the story's `tests[]` and the criterion is proven by check 4 exactly like any other test, so Gate 2 still blocks. Separate QA repo: evidence travels as `knowledge/traceability/e2e-coverage.json`, opened as a PR into the product repo. Stories are always read from **GitHub** (`gh api`), never from a ticket.
-3. **The cross-repo check is opportunistic and honest about its limit.** Absent file → silent: no warning, no config, no requirement, so a project that never adopts this is unaffected. Present → strict: every claimed criterion must exist in its story, a failing remote test is an error, and a pass must carry the run it came from. It **cannot** prove that a remote assertion ran — only the claim's form and the criterion's existence. `run_url` is mandatory for a pass precisely because that is all the product repo can see.
-4. **Placement is a decision, not a convention.** `--root <dir>` chooses it (default `e2e/`), and from then on `testDir` in `playwright.config.ts` is the **only** record — no config key, nothing to drift. To make that safe, check 5 now finds test files with `git ls-files` over test globs instead of walking `apps/` and `libs/`.
+3. **The cross-repo check is opportunistic and honest about its limit.** Absent file → silent: no warning, no config, no requirement, so a project that never adopts this is unaffected. Present → strict: every claimed criterion must exist in its story, a failing remote test is an error, and a pass must carry the run it came from. It **cannot** prove that a remote assertion ran, only the claim's form and the criterion's existence. `run_url` is mandatory for a pass precisely because that is all the product repo can see.
+4. **Placement is a decision, not a convention.** `--root <dir>` chooses it (default `e2e/`), and from then on `testDir` in `playwright.config.ts` is the **only** record, no config key, nothing to drift. To make that safe, check 5 now finds test files with `git ls-files` over test globs instead of walking `apps/` and `libs/`.
 5. **Harness-agnostic by construction.** The persona instructions live in `.claude/skills/qa/SKILL.md` and `.claude/agents/aidlc-qa.md` and reach Cursor, opencode and Copilot through the ADR-005 generator. The only external dependencies are Playwright MCP — configuration, written in the three shapes the harnesses actually disagree on — and `npx playwright test`. Playwright's own agent definitions are **not** vendored.
-6. **Playwright MCP is a scoped exception to "read-only MCP".** It may drive a browser against a test environment, because a locator verified against the real DOM is the difference between a generated test and a guessed one. It may not act against production, and nothing it does approves, merges, deploys, or edits an approved artifact — the gate boundary is unchanged.
+6. **Playwright MCP is a scoped exception to "read-only MCP".** It may drive a browser against a test environment, because a locator verified against the real DOM is the difference between a generated test and a guessed one. It may not act against production, and nothing it does approves, merges, deploys, or edits an approved artifact. The gate boundary is unchanged.
 7. **No new persona.** `/qa` gains a mode. A `qa-e2e` role would need a charter, an agent, a generator entry and a routing slot to describe the same person.
 
 ## Alternatives considered
@@ -56,7 +56,7 @@ Two invariants were at stake:
 
 - **The separate-repo topology cannot block a story PR.** Its evidence proves form, not assertion. Teams that need e2e to gate delivery use same-repo, and both the standards and the Definition of Done say so plainly rather than implying parity.
 - **Playwright is the first hard external runtime dependency** the framework asks a team to install. It is confined to the opt-in layer: a project that never runs `--profile e2e` acquires nothing, and no gate depends on Playwright existing.
-- **A write-capable MCP server is now sanctioned**, scoped to test environments and documented rather than tool-enforced — MCP availability is a client-side setting, and the framework says so rather than pretending otherwise.
+- **A write-capable MCP server is now sanctioned**, scoped to test environments and documented rather than tool-enforced. MCP availability is a client-side setting, and the framework says so rather than pretending otherwise.
 - **A prose test-case document now exists**, which `ai/roles/qa.md` previously banned outright. The ban is rescoped to documents that re-record results a test already proves; the plan is a generation input and a review surface, and it is reviewed *before* the code it produces.
 
 **Gained:**

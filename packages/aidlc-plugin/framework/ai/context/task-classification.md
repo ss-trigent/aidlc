@@ -1,10 +1,10 @@
 # Task classification — tier the work before you touch it
 
-**What this is:** the first thing a delivery persona does with an incoming task — before loading the context chain, before writing code. It answers one question: *how much machinery does this task actually need?*
+**What this is:** the first thing a delivery persona does with an incoming task, before loading the context chain, before writing code. It answers one question: *how much machinery does this task actually need?*
 
-**Honest classification:** the tiering itself is guidance — nothing verifies which tier a persona picked. What the tier _routes to_ is enforced: `aidlc-check`, required statuses, and branch protection don't care how a task was labelled. The value here is not ceremony; it is (a) not running the full Gate 1→2 path for a docs edit, and (b) not sliding a schema change through as a "quick fix".
+**Honest classification:** the tiering itself is guidance. Nothing verifies which tier a persona picked. What the tier _routes to_ is enforced: `aidlc-check`, required statuses, and branch protection don't care how a task was labelled. The value here is not ceremony; it is (a) not running the full Gate 1→2 path for a docs edit, and (b) not sliding a schema change through as a "quick fix".
 
-Read [`context-loading.md`](context-loading.md) next — the tier sets the context budget.
+Read [`context-loading.md`](context-loading.md) next. The tier sets the context budget.
 
 ---
 
@@ -28,7 +28,7 @@ If a `US-###` or `REQ-###` appears, resolve it against `knowledge/traceability/m
 
 Do **not** add up points, and do **not** tier by diff size. A one-line change to a required request field outranks a 300-line docs edit. Find the **riskiest architectural surface** the task touches; that surface sets the tier. Walk Complex → Medium → Simple and stop at the first match.
 
-The five surfaces below are stack-neutral on purpose — a product is rarely only a backend. Each names the boundary in the abstract, then what it looks like in the kinds of code most projects hold.
+The five surfaces below are stack-neutral on purpose. A product is rarely only a backend. Each names the boundary in the abstract, then what it looks like in the kinds of code most projects hold.
 
 ### Complex — crosses a contract, persistence, trust, dependency, or operational boundary (any one)
 
@@ -86,18 +86,18 @@ No new contract, no schema change, no trust surface.
 
 **Boundary rule:** a task that looks Medium but touches *any* Complex surface is **Complex**. When genuinely unsure which side of a boundary a change sits on, take the higher tier and say so (`Confidence: Medium` or `Low`).
 
-**Carve-out precedence:** when a task matches a Complex catch-all *and* a specific Medium bullet (an optional field on an existing write endpoint; a read-only GET reusing an existing model), the Medium bullet wins — it exists to stop well-scoped work being over-tiered. The boundary rule still governs everything the carve-outs don't name.
+**Carve-out precedence:** when a task matches a Complex catch-all *and* a specific Medium bullet (an optional field on an existing write endpoint; a read-only GET reusing an existing model), the Medium bullet wins. It exists to stop well-scoped work being over-tiered. The boundary rule still governs everything the carve-outs don't name.
 
 ### Project extensions — `ai/standards/task-surfaces.md`
 
-The five surfaces above are framework-owned and hash-locked: every AI-DLC project tiers by the same boundaries, so the workflow reads the same wherever you work. What a boundary is *called in this codebase* is not something the framework can know — that is the project's to write.
+The five surfaces above are framework-owned and hash-locked: every AI-DLC project tiers by the same boundaries, so the workflow reads the same wherever you work. What a boundary is *called in this codebase* is not something the framework can know. That is the project's to write.
 
-**Read [`ai/standards/task-surfaces.md`](../standards/task-surfaces.md) after this file, and apply both.** It is project-owned (excluded from `ai/framework-lock.json`) and the team edits it freely — naming their real files, modules, protected paths, and the surfaces their stack has that this list doesn't.
+**Read [`ai/standards/task-surfaces.md`](../standards/task-surfaces.md) after this file, and apply both.** It is project-owned (excluded from `ai/framework-lock.json`) and the team edits it freely, naming their real files, modules, protected paths, and the surfaces their stack has that this list doesn't.
 
 Two rules keep the extension honest:
 
 - A project may **add** surfaces at any tier, and may add **named** Medium carve-outs for well-scoped work its stack over-tiers.
-- A project may **not remove or demote** a framework surface. The lock makes this structural rather than a promise — a project cannot edit the list above, only extend it. A team that believes a framework surface is wrong opens a `change-request` issue upstream.
+- A project may **not remove or demote** a framework surface. The lock makes this structural rather than a promise. A project cannot edit the list above, only extend it. A team that believes a framework surface is wrong opens a `change-request` issue upstream.
 
 If the file is absent, classify on the framework surfaces alone and say so in the block (`Signals:` names the framework surface). Its absence is not a reason to stall.
 
@@ -158,9 +158,9 @@ PLANNED CHANGES
 
 At **Medium and Complex** tier the plan is a **file**, not a chat block: write the spec package into `inception/specs/US-###-<slug>/` first (Step 5), then let `PLANNED CHANGES` point at `implementation-plan.md` rather than restate it. The human reads the file; the block tells them where it is.
 
-If **Open questions** is non-empty, ask them and stop — a plan built on unanswered questions is a guess with formatting. Only when every load-bearing fact is verified or answered do you write: **"Reply `go` to proceed, or tell me what to change."**
+If **Open questions** is non-empty, ask them and stop. A plan built on unanswered questions is a guess with formatting. Only when every load-bearing fact is verified or answered do you write: **"Reply `go` to proceed, or tell me what to change."**
 
-If **Confidence: Low**, ask one multiple-choice question *before* presenting the plan — you can't plan changes for a tier you haven't confirmed:
+If **Confidence: Low**, ask one multiple-choice question *before* presenting the plan. You can't plan changes for a tier you haven't confirmed:
 
 - A) Question or docs only (Simple)
 - B) A narrow fix or an approved story slice (Medium)
@@ -170,7 +170,7 @@ If **Confidence: Low**, ask one multiple-choice question *before* presenting the
 
 ## Step 5 — What each tier costs
 
-The tier decides which existing framework machinery is mandatory, and how much of the spec package the work carries. It introduces no new gate — Discovery, Delivery and Release are unchanged ([`ai/AI-DLC.md`](../AI-DLC.md)).
+The tier decides which existing framework machinery is mandatory, and how much of the spec package the work carries. It introduces no new gate. Discovery, Delivery and Release are unchanged ([`ai/AI-DLC.md`](../AI-DLC.md)).
 
 | Tier        | Story                                                | Spec package                                                                                                                                                                                        | Architect                                                          | QA                                        | PR                                                                 |
 | ----------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------ |

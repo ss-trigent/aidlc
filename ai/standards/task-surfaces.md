@@ -2,7 +2,7 @@
 
 Extends [`ai/context/task-classification.md`](../context/task-classification.md) with the surfaces **this codebase** has. The framework file names the five boundaries every AI-DLC project shares; this one names them in our files and adds what our stack has that the generic list doesn't.
 
-**This file is project-owned** — not in `ai/framework-lock.json`, so the team edits it freely. Two rules: you may **add** surfaces and **named** Medium carve-outs; you may **not** remove or demote a framework surface (open a `change-request` issue upstream instead).
+**This file is project-owned**, not in `ai/framework-lock.json`, so the team edits it freely. Two rules: you may **add** surfaces and **named** Medium carve-outs; you may **not** remove or demote a framework surface (open a `change-request` issue upstream instead).
 
 > **Seed — rewrite this.** The entries below describe the framework's own reference stack (Nx, NestJS, Angular). Replace them with yours on the first story; delete any section your project doesn't have.
 
@@ -39,7 +39,7 @@ Any change under these is Complex regardless of diff size:
 
 ## Medium carve-outs
 
-Work our stack over-tiers. Each must be *named* — a general "use judgement" clause is not a carve-out:
+Work our stack over-tiers. Each must be *named*. A general "use judgement" clause is not a carve-out:
 
 - Adding a field to an existing DTO **and** its entity in the same PR, where the migration is generated (not hand-written) and the field is nullable — Medium, not Complex
 - A new `@Get` lookup endpoint following the existing read-only pattern, reusing entity + repository + response DTO — Medium
