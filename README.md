@@ -1,6 +1,6 @@
 # AI-DLC — AI-Driven Development Lifecycle
 
-A delivery framework where seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) assist their human counterparts through **three CI-enforced gates** (Discovery → Delivery → Release). Approvals are authenticated GitHub PR reviews — never chat text, with one named exception ([Gate D1](ai/gates/delivery.md#why-d1-is-not-a-pr-review), the developer's plan review); traceability (`REQ → US → AC → tests`) is validated on every PR by a policy-as-code check. Unlike instruction-only systems (spec-kit, AWS aidlc-workflows), it **enforces outcomes** — see the [full comparison](docs/aidlc-vs-spec-kit.md).
+A delivery framework where seven role-persona AI juniors (BA, UX, Architect, DEV, QA, DevOps, Manager) assist their human counterparts through **three CI-enforced gates** (Discovery → Delivery → Release). Approvals are authenticated GitHub PR reviews, never chat text, with one named exception ([Gate D1](ai/gates/delivery.md#why-d1-is-not-a-pr-review), the developer's plan review); traceability (`REQ → US → AC → tests`) is validated on every PR by a policy-as-code check. Unlike instruction-only systems (spec-kit, AWS aidlc-workflows), it **enforces outcomes**. See the [full comparison](docs/aidlc-vs-spec-kit.md).
 
 ## Use it in your repo
 
@@ -18,7 +18,7 @@ Then, in the repository you want to run AI-DLC in:
 /aidlc             # start working — routes you to your persona
 ```
 
-The scaffold pins the personas into the repository itself for every editor. Once it's merged, each teammate's setup is **cloning the repo** — nothing to install per person:
+The scaffold pins the personas into the repository itself for every editor. Once it's merged, each teammate's setup is **cloning the repo**, nothing to install per person:
 
 | Your editor               | Setup                                          | Where the personas live                                                                            |
 | ------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -27,13 +27,13 @@ The scaffold pins the personas into the repository itself for every editor. Once
 | **GitHub Copilot**        | clone                                          | `/ba`, `/dev` … as prompt files in Copilot Chat (`.github/prompts/`), plus skills and agents in `.github/` |
 | **opencode**              | clone                                          | `/ba`, `/dev` … as commands in `.opencode/commands/`, plus skills and agents under `.opencode/`    |
 
-All four surfaces are generated from the same repo-pinned sources and drift-checked in CI, so every teammate runs the identical persona version regardless of editor. The gates are editor-independent — approvals are GitHub PR reviews and `aidlc-check` is the required CI status either way.
+All four surfaces are generated from the same repo-pinned sources and drift-checked in CI, so every teammate runs the identical persona version regardless of editor. The gates are editor-independent. Approvals are GitHub PR reviews and `aidlc-check` is the required CI status either way.
 
 Full walkthrough — prerequisites, the init interview, CI wiring, ownership, upgrades, per-editor details: **[docs/adopting-aidlc.md](docs/adopting-aidlc.md)**. For a visual tour of the whole methodology, open **[docs/aidlc-how-it-works.html](docs/aidlc-how-it-works.html)** in a browser.
 
 ### Bootstrapping without Claude Code
 
-The scaffold is a plain Node script — `/aidlc-init` itself just drives it. From inside your target repo:
+The scaffold is a plain Node script. `/aidlc-init` itself just drives it. From inside your target repo:
 
 ```bash
 npx github:ss-trigent/aidlc
@@ -53,7 +53,7 @@ Refreshes every framework-owned file and the pinned persona surfaces, then verif
 
 ## Configuring it for your team
 
-The framework is a shared library, not a fork. A short list of files is **yours** — the init interview writes them for your stack and you edit them freely from then on. Everything else is hash-locked, so every adopting team stays on the same gates.
+The framework is a shared library, not a fork. A short list of files is **yours**. The init interview writes them for your stack and you edit them freely from then on. Everything else is hash-locked, so every adopting team stays on the same gates.
 
 | Yours to edit                          | What you put there                                                              |
 | -------------------------------------- | ------------------------------------------------------------------------------- |
@@ -77,7 +77,7 @@ ai/standards/task-surfaces.md     ← name your protected paths, per-domain
                                      and your Medium carve-outs
 ```
 
-You may **add** surfaces and named carve-outs; you may not remove or demote a framework one. That isn't a promise — the framework list is locked, so it can only be extended. If a framework surface is genuinely wrong for you, that's a `change-request` upstream.
+You may **add** surfaces and named carve-outs; you may not remove or demote a framework one. That isn't a promise. The framework list is locked, so it can only be extended. If a framework surface is genuinely wrong for you, that's a `change-request` upstream.
 
 ### Configuring templates
 
@@ -88,7 +88,7 @@ Two kinds, and only one is yours:
 
 ### Optional integrations
 
-All off by default, all configured in your own files — nothing to install into the framework: Jira mirroring ([`ai/context/jira-sync.md`](ai/context/jira-sync.md) is binding; `tools/aidlc-jira.mjs` is the only permitted writer), any design tool via the generated `inception/design/tokens.json`, MCP servers for **read-only** context, and [mattpocock/skills](https://github.com/mattpocock/skills) as companion techniques personas may invoke while staying bound by their charters. The full adopted/declined list with rationale: [`ai/integrations.md`](ai/integrations.md).
+All off by default, all configured in your own files, nothing to install into the framework: Jira mirroring ([`ai/context/jira-sync.md`](ai/context/jira-sync.md) is binding; `tools/aidlc-jira.mjs` is the only permitted writer), any design tool via the generated `inception/design/tokens.json`, MCP servers for **read-only** context, and [mattpocock/skills](https://github.com/mattpocock/skills) as companion techniques personas may invoke while staying bound by their charters. The full adopted/declined list with rationale: [`ai/integrations.md`](ai/integrations.md).
 
 ### When you need to change something locked
 
@@ -109,9 +109,9 @@ Open a [`change-request` issue](https://github.com/ss-trigent/aidlc/issues) agai
 
 ## Maintaining the framework
 
-- Edit sources (`ai/`, `.claude/`, `tools/`), then rebuild both generated trees: `npm run build:plugin` and `npm run build:surfaces`. CI (`node tools/aidlc-check.mjs`) fails on drift — never hand-edit generated files.
+- Edit sources (`ai/`, `.claude/`, `tools/`), then rebuild both generated trees: `npm run build:plugin` and `npm run build:surfaces`. CI (`node tools/aidlc-check.mjs`) fails on drift. Never hand-edit generated files.
 - Intentional changes to framework-owned files require regenerating the lock: `node tools/aidlc-check.mjs --lock` (maintainers only, deliberately excluded from `--write`).
-- Adopting teams own only what `/aidlc-init` tailors for them (`ai/standards/`, `ai/project-context.md`, `ai/templates/jira/`, their manifest and CI wiring); everything else is verified against the shipped lock in *their* CI too. Their change proposals arrive here as [`change-request` issues](https://github.com/ss-trigent/aidlc/issues) — that contract is what keeps every adopter on one framework instead of divergent forks.
+- Adopting teams own only what `/aidlc-init` tailors for them (`ai/standards/`, `ai/project-context.md`, `ai/templates/jira/`, their manifest and CI wiring); everything else is verified against the shipped lock in *their* CI too. Their change proposals arrive here as [`change-request` issues](https://github.com/ss-trigent/aidlc/issues). That contract is what keeps every adopter on one framework instead of divergent forks.
 
 ## Provenance
 

@@ -17,7 +17,7 @@ The framework produced Discovery artifacts (BRD, screen specs, stories) and code
 - where each requirement ended up in the code — `manifest.json` holds test paths, not code locations;
 - what changed across revisions of the same feature.
 
-An adopting team reported the gap in their own words: "development specs are not creating". They were not describing a bug. They were describing an absence, measured against a per-feature spec package their product repo already keeps — one whose workflow carries **seven** human gates. They wanted the package without the gates.
+An adopting team reported the gap in their own words: "development specs are not creating". They were not describing a bug. They were describing an absence, measured against a per-feature spec package their product repo already keeps, one whose workflow carries **seven** human gates. They wanted the package without the gates.
 
 ## Decision
 
@@ -27,7 +27,7 @@ We will keep a **per-story spec package** at `inception/specs/US-###-<slug>/`, o
 2. **Ownership.** The Architect writes `inception/architecture/` once, before delivery starts, and an `ADR-###` when a real trade-off appears. Per-story decisions and impact are the developer's.
 3. **Two gates.** **D1** — the human reads `implementation-plan.md` and `impact-analysis.md` and approves **in chat**; DEV stamps the approval into the plan (name and email from `git config`, date, and the SHA of the plan as read) and commits it. **D2** — the story PR, reviewed and merged in GitHub. Everything between is a persona obligation, not a human approval.
 4. **The tier decides how much package.** Simple writes one row in `inception/specs/_change-log.md`; Medium updates an existing package; Complex writes all of it (`ai/context/task-classification.md` Step 5).
-5. **Check 16.** A package that exists must be internally honest: every `FR`/`NFR` traced, every cited path real, every `US`/`AC` resolvable, a row in the index, and an approval block that is well-formed and matches the plan it approved. An **absent** package fails nothing — CI cannot know the tier.
+5. **Check 16.** A package that exists must be internally honest: every `FR`/`NFR` traced, every cited path real, every `US`/`AC` resolvable, a row in the index, and an approval block that is well-formed and matches the plan it approved. An **absent** package fails nothing. CI cannot know the tier.
 
 ## Alternatives considered
 
@@ -51,4 +51,4 @@ We will keep a **per-story spec package** at `inception/specs/US-###-<slug>/`, o
 
 **Unchanged.** Discovery (Gate 1), Release (Gate 3), `manifest.json`'s schema, the `feat/US-###-<slug>` branch pattern, all seven persona commands, and ADR-006's e2e plan gate.
 
-**Follow-up.** `ai/context/task-classification.md` is hash-locked, so every adopting repo sees that file change and the lock regenerate on update. `aidlc-scaffold.mjs --update` carries the new templates and seeds and skips team-owned files, so a repo mid-story stays green — stories already in flight simply have no package, which check 16 permits.
+**Follow-up.** `ai/context/task-classification.md` is hash-locked, so every adopting repo sees that file change and the lock regenerate on update. `aidlc-scaffold.mjs --update` carries the new templates and seeds and skips team-owned files, so a repo mid-story stays green. Stories already in flight simply have no package, which check 16 permits.

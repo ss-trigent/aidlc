@@ -23,11 +23,11 @@ Or jump straight to a persona: `/ba` `/ux` `/architect` `/dev` `/qa` `/devops` `
 
 The scaffold pins the personas into the repo for **every editor** — Claude Code (`.claude/`), Cursor (`.cursor/`), opencode (`.opencode/`) and GitHub Copilot (`.github/`) — so teammates on those editors need nothing installed; cloning the repo is their setup, and `aidlc-check` keeps all four surfaces in sync.
 
-No Claude Code on the team? The scaffold `/aidlc-init` drives is a plain Node script (`framework/tools/aidlc-scaffold.mjs`) — run `npx github:ss-trigent/aidlc` from inside the target repo for the identical result, then tailor the standards via `/aidlc` in any editor.
+No Claude Code on the team? The scaffold `/aidlc-init` drives is a plain Node script (`framework/tools/aidlc-scaffold.mjs`). Run `npx github:ss-trigent/aidlc` from inside the target repo for the identical result, then tailor the standards via `/aidlc` in any editor.
 
 ## Update
 
-Update the plugin (`/plugin` → update `aidlc@trigent-aidlc`), then run `/aidlc-init` in the adopted repo — it detects the install and upgrades instead of scaffolding. Without Claude Code, the same upgrade is one command from inside that repo:
+Update the plugin (`/plugin` → update `aidlc@trigent-aidlc`), then run `/aidlc-init` in the adopted repo. It detects the install and upgrades instead of scaffolding. Without Claude Code, the same upgrade is one command from inside that repo:
 
 ```bash
 npx github:ss-trigent/aidlc --update
@@ -49,11 +49,11 @@ Optional companion: [mattpocock/skills](https://github.com/mattpocock/skills) �
 | `framework/seed/`                 | Fresh-repo manifest skeleton + CI step snippet           | **generated**                                  |
 | `.claude-plugin/plugin.json`      | Plugin manifest                                          | hand-maintained                                |
 
-Never hand-edit generated paths — change the sources in the repo root and run `node tools/aidlc-build-plugin.mjs`. CI fails on drift (`aidlc-check` check #9).
+Never hand-edit generated paths. Change the sources in the repo root and run `node tools/aidlc-build-plugin.mjs`. CI fails on drift (`aidlc-check` check #9).
 
 ## Ownership after install
 
-The framework is a shared library. An adopting team owns — and freely edits — what `/aidlc-init` generates for it: `ai/standards/` (rewritten for their stack in the init interview, including `task-surfaces.md`, where they name the task-classification surfaces their codebase actually has), `ai/project-context.md`, `ai/templates/jira/`, the traceability manifest, and CI wiring. Everything else under `ai/` plus the `aidlc-*` tools is framework-owned: `ai/framework-lock.json` ships a SHA-256 per file and `aidlc-check` (check #14) fails the build on any edit or deletion until reverted — that includes the artifact templates (`brd.md`, `user-story.md`, `screen-spec.md`, `test-plan.md`, `adr.md`, `pr-description.md`), whose shape is what traceability is validated against. Wanting a different gate rule is legitimate — it goes upstream as a `change-request` issue against this repo, never a local edit. Full configuration guide: [README §Configuring it for your team](../../README.md#configuring-it-for-your-team).
+The framework is a shared library. An adopting team owns, and freely edits, what `/aidlc-init` generates for it: `ai/standards/` (rewritten for their stack in the init interview, including `task-surfaces.md`, where they name the task-classification surfaces their codebase actually has), `ai/project-context.md`, `ai/templates/jira/`, the traceability manifest, and CI wiring. Everything else under `ai/` plus the `aidlc-*` tools is framework-owned: `ai/framework-lock.json` ships a SHA-256 per file and `aidlc-check` (check #14) fails the build on any edit or deletion until reverted. That includes the artifact templates (`brd.md`, `user-story.md`, `screen-spec.md`, `test-plan.md`, `adr.md`, `pr-description.md`), whose shape is what traceability is validated against. Wanting a different gate rule is legitimate. It goes upstream as a `change-request` issue against this repo, never a local edit. Full configuration guide: [README §Configuring it for your team](../../README.md#configuring-it-for-your-team).
 
 ## What makes it different from spec-kit / AWS aidlc-workflows
 

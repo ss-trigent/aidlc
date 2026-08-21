@@ -8,4 +8,4 @@
 - Error body: global exception filter shape — consistent `{ statusCode, message, error }`; no stack traces or internals leaked
 - Pagination for unbounded collections: `?page&limit` with a documented max
 - Admin surface (`/api/admin/*`) always behind `x-admin-key` guard
-- Every endpoint change regenerates the OpenAPI snapshot and typed client (`npm run generate-client`) — `libs/api/client` is never hand-edited
+- Every endpoint change regenerates the OpenAPI snapshot and typed client (`npm run generate-client`). `libs/api/client` is never hand-edited

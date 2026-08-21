@@ -23,19 +23,19 @@ Each brushes against an existing invariant, which is what made them decisions ra
 
 ### 1. Two-phase design, product-team sign-off
 
-The design step (Gate 1 step 2) runs in two passes: **2a structure** — the `SCR-###` spec (layout, numbered `ST-##` states, components, conflicts), approved by the **designer**; then **2b styling** — refined `tokens.css` (both themes) and component previews that render the states styled, approved by the **product team**. The hi-fi frames stay in the design tool as before ([ADR-002](ADR-002-jira-tracking-flow.md)); 2b's repo artifact is the tokens + previews, not the frames. A styling change that forces a structural change reopens 2a. No validator change — tokens, previews, and states are already enforced; this is a review-sequence and an added approver.
+The design step (Gate 1 step 2) runs in two passes: **2a structure** — the `SCR-###` spec (layout, numbered `ST-##` states, components, conflicts), approved by the **designer**; then **2b styling** — refined `tokens.css` (both themes) and component previews that render the states styled, approved by the **product team**. The hi-fi frames stay in the design tool as before ([ADR-002](ADR-002-jira-tracking-flow.md)); 2b's repo artifact is the tokens + previews, not the frames. A styling change that forces a structural change reopens 2a. No validator change. Tokens, previews, and states are already enforced; this is a review-sequence and an added approver.
 
 ### 2. Architecture as a read-only Architect deliverable (Path A)
 
 The Architect produces a **DB design + app architecture** in `inception/architecture/`, once requirements are frozen, in its own reviewed PR. It **gates nothing** (no CI check requires it; no step waits on it) and **needs only requirements**.
 
-Crucially, the Architect stays **read-only by construction** — its agent keeps `disallowedTools: Write, Edit, NotebookEdit` (invariant #6, check 10 unchanged). It **drafts** the design and a reviewed PR lands it, exactly as it already does for ADRs. We did **not** give the Architect write access (the rejected Path B), so no amendment to ADR-001's read-only model was needed.
+The Architect stays **read-only by construction**. Its agent keeps `disallowedTools: Write, Edit, NotebookEdit` (invariant #6, check 10 unchanged). It **drafts** the design and a reviewed PR lands it, exactly as it already does for ADRs. We did **not** give the Architect write access (the rejected Path B), so no amendment to ADR-001's read-only model was needed.
 
-This reverses, for Inception only, the Architect charter's "migrations and OpenAPI are the design, not prose." The reversal is a **lifecycle sequencing**, not a contradiction: before any code exists there are no migrations to point at, so the design is written as prose; once Construction produces the migrations and the OpenAPI document, **they** become the source of truth and the Inception folder is history — never a second copy kept in sync.
+This reverses, for Inception only, the Architect charter's "migrations and OpenAPI are the design, not prose." The reversal is a **lifecycle sequencing**, not a contradiction: before any code exists there are no migrations to point at, so the design is written as prose; once Construction produces the migrations and the OpenAPI document, **they** become the source of truth and the Inception folder is history, never a second copy kept in sync.
 
 ### 3. Delivery planning as advisory Manager work
 
-The **Manager** proposes a delivery plan — rough estimates, a two-week-sprint grouping, risks, and a shareable report — from the merged requirements and stories. It is **advisory**: the human decides every number and **locks the plan in Jira**, which owns sprint/assignee/estimate per [ADR-002](ADR-002-jira-tracking-flow.md). The Manager stays **read-only and produces no repo artifact** — no checked-in status file, consistent with its charter. The shareable report is the same Jira/report surface the Manager already uses for status. We did **not** relax ADR-002's refusal list (the rejected alternative), so `aidlc-jira` still refuses to write sprints.
+The **Manager** proposes a delivery plan — rough estimates, a two-week-sprint grouping, risks, and a shareable report — from the merged requirements and stories. It is **advisory**: the human decides every number and **locks the plan in Jira**, which owns sprint/assignee/estimate per [ADR-002](ADR-002-jira-tracking-flow.md). The Manager stays **read-only and produces no repo artifact**, no checked-in status file, consistent with its charter. The shareable report is the same Jira/report surface the Manager already uses for status. We did **not** relax ADR-002's refusal list (the rejected alternative), so `aidlc-jira` still refuses to write sprints.
 
 ## Alternatives considered
 
@@ -54,7 +54,7 @@ The **Manager** proposes a delivery plan — rough estimates, a two-week-sprint 
 
 **Harder / accepted costs.**
 
-- **Three advisory outputs are guidance, not gates.** The architecture doc and the delivery plan can be skipped or ignored, and CI will not complain — by design. Their value rests on the personas producing them and humans using them, the same trust model as the reorder's charter-only ordering.
+- **Three advisory outputs are guidance, not gates.** The architecture doc and the delivery plan can be skipped or ignored, and CI will not complain, by design. Their value rests on the personas producing them and humans using them, the same trust model as the reorder's charter-only ordering.
 - **The Inception architecture doc can rot** if anyone treats it as a living contract. Mitigation: the README and the Architect charter both say it is superseded by migrations + OpenAPI in Construction; it is a starting shape, deliberately not maintained afterward.
 - **A second design approver adds a review touchpoint.** For a small UI change, structure and styling can be one PR reviewed by both; the two-pass split is a rule about _what must be signed off_, not a mandate for two PRs.
 - **Delivery estimates live only in Jira.** A team without Jira has the Manager's proposal in conversation and nowhere durable to lock it. Accepted: the framework must survive Jira's absence (ADR-002), and an estimate is exactly the kind of thing Jira owns.

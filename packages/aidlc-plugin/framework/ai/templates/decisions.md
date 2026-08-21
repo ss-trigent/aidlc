@@ -1,6 +1,6 @@
 # US-### — decisions
 
-> Technical choices made while implementing this story, with the reasoning that produced them. A choice that changes the shape of the system is not recorded here — it goes to the Architect as an `ADR-###`.
+> Technical choices made while implementing this story, with the reasoning that produced them. A choice that changes the shape of the system is not recorded here. It goes to the Architect as an `ADR-###`.
 
 | ID   | Decision           | Rationale                                        | Alternatives rejected                              |
 | ---- | ------------------ | ------------------------------------------------ | -------------------------------------------------- |

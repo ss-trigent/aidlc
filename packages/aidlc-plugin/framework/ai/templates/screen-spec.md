@@ -28,7 +28,7 @@ Structure in words — regions, hierarchy, what dominates. A rough ASCII block i
 
 ## States
 
-Numbered like acceptance criteria, and for the same reason: an unnumbered state is a state someone forgets to build. Floor for any screen that loads data — default, loading, empty, error — plus every domain state the requirement implies.
+Numbered like acceptance criteria, and for the same reason: an unnumbered state is a state someone forgets to build. Floor for any screen that loads data: default, loading, empty, error, plus every domain state the requirement implies.
 
 ### ST-01 <Name>
 
@@ -59,7 +59,7 @@ Components are declared in `knowledge/traceability/manifest.json` under this scr
 
 ## Structural decisions
 
-Recorded so the human can interrogate them at review — "why this way?" should have an answer in the file, not in someone's memory.
+Recorded so the human can interrogate them at review. "Why this way?" should have an answer in the file, not in someone's memory.
 
 | Decision | Rationale | Alternative rejected |
 | -------- | --------- | -------------------- |

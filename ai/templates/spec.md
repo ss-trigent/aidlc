@@ -14,7 +14,7 @@
 
 ## Problem
 
-Two or three sentences in technical terms: what the system does today, and what it must do instead. The business case belongs in the story — do not restate it.
+Two or three sentences in technical terms: what the system does today, and what it must do instead. The business case belongs in the story. Do not restate it.
 
 ## Functional requirements
 
