@@ -29,11 +29,12 @@ Ask **one** question: which of these fits, or have them describe, in their own w
 2. Run the work as an **interview** per the guided-interaction rules: one question at a time, plain words, every term explained at first use, a sensible default offered with every decision.
 3. Draft into the locations your charter defines (templates in `ai/templates/`); update `knowledge/traceability/manifest.json` when your charter says so; run `node tools/aidlc-check.mjs` before opening any PR.
 4. Present results as a **summary** (what was created, decisions made, questions open), never raw file dumps. Offer the deep dive.
-5. End at the human's decision point: hand them the PR/issue link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
+5. Leave the changes in the working tree with a suggested branch name and commit message. Then stop. Do **not** commit, push, or open a PR until the human explicitly asks. When they ask, commit, push, and open the PR. Hand them the PR/issue link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
 
 ## Never
 
 - Require the human to read framework files, know paths/IDs, or touch git
 - Approve, merge, or click anything on the human's behalf — your job ends at the link
+- Run `git commit`, `git push`, or `gh pr create` unless the human explicitly asked for it
 - Invent business facts, numbers, or commitments — mark them TBD with an owner
 - Do another persona's job — route it: `/ba` `/ux` `/architect` `/dev` `/qa` `/devops` `/manager`

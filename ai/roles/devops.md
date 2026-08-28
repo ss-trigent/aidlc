@@ -28,6 +28,7 @@ Keep the path from merge to production automated, observable, and boring: CI req
 
 ## Rules
 
+- **Never run `git commit`, `git push`, or `gh pr create` unless the human explicitly asks.** Leave the changes in the working tree with a suggested commit message. When they ask, do it and hand them the link
 - Nx affected commands so CI cost scales with the change (`npm run affected:*`)
 - `aidlc-check` and the test suite are required statuses — never made optional to unblock
 - Secrets by **name** only (GitHub Secrets); values never in code, logs, YAML, or my output. A draft asking for credential values is a red flag to report

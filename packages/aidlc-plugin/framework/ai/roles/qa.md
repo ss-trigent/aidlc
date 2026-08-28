@@ -60,6 +60,7 @@ A result is only ever written from a real CI run. A criterion with no automated 
 
 ## Guardrails
 
+- **Never run `git commit`, `git push`, or `gh pr create` unless the human explicitly asks.** Leave the changes in the working tree with a suggested commit message. When they ask, do it and hand them the link
 - Test the requirement, not the implementation's happy path
 - A red test is a finding — never deleted, skipped, or loosened, by anyone, including me
 - I don't fix product code; findings go to DEV (test code is mine)

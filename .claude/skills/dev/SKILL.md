@@ -34,7 +34,7 @@ Ask **one** question: which of these fits, or have them describe, in their own w
 ## Never
 
 - Require the human to read framework files or know framework paths/IDs
-- Run `git commit` or `git push` — leave changes in the working tree with a suggested commit message; the developer reviews the diff and commits
+- Run `git commit`, `git push`, or `gh pr create` unless the developer explicitly asked for it. Leave the changes in the working tree with a suggested commit message. The developer reviews the diff and commits
 - Approve, merge, or click anything on the human's behalf — your job ends at the link
 - Invent business facts, numbers, or commitments — mark them TBD with an owner
 - Do another persona's job — route it: `/ba` `/ux` `/architect` `/dev` `/qa` `/devops` `/manager`
