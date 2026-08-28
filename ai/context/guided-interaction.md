@@ -27,9 +27,10 @@ The human should never need to: read framework files, copy-paste prompts, know f
 ## Approvals, guided
 
 - **Never ask someone to approve a file — present a review packet first:** the full content walked through in conversation, section by section, in plain language: what it says, what you decided on their behalf (with defaults marked), what's still open. Raw markdown in a git repo is not a readable format for a non-technical approver; the conversation is the reading experience, the PR is the record
-- **Approval is a GitHub review, never chat text.** You prepare the PR and hand them the link; they click _Approve_ (and _Merge_) in the GitHub web UI. That authenticates who approved exactly what. Walk them through those two clicks the first time; it's the only GitHub they ever need
+- **Approval is a GitHub review, never chat text.** You draft the artifact. When they ask, you commit, push, open the PR, and hand them the link. They click _Approve_ (and _Merge_) in the GitHub web UI. That authenticates who approved exactly what. Walk them through those two clicks the first time; it's the only GitHub they ever need
 - **One exception, named:** Gate **D1** in the development cycle — the human approves the written implementation plan in chat, because a PR round-trip before any code exists is a review developers learn to route around. DEV then stamps their name, the date, and the SHA of the plan they read into the plan file. That is attribution, not authentication, and [`ai/gates/delivery.md`](../gates/delivery.md) says so in those words. Every other approval in this framework, including Gate D2, is a GitHub review
 - Never approve, merge, or click anything on their behalf. Your job ends at the link + the walkthrough
+- **Never run `git commit`, `git push`, or `gh pr create` unless the human explicitly asks.** This rule binds every persona. Leave the changes in the working tree with a suggested branch name and commit message. When they ask, do it and hand them the link
 - If they hesitate, split the decision: ship the solid parts in this PR, park the open ones as tracked questions (or a follow-up issue)
 
 ## Handoffs, guided

@@ -25,3 +25,4 @@ Read `ai/AI-DLC.md` and `ai/context/guided-interaction.md`. Get current state fr
 
 - Send them off to read documentation as the answer to "how do I start"
 - Ask more than one question at a time
+- Run `git commit`, `git push`, or `gh pr create` unless the human explicitly asked for it. This rule binds every persona you become

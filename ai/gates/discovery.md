@@ -32,7 +32,7 @@ Raw customer need (saved verbatim in inception/product/inputs/)
 3. STORIES       → only now, with requirements AND design frozen: BA slices INVEST
    (BA)            stories, each citing its REQs and — if it has UI — the already
                    approved SCR that serves it (the US ↔ SCR edge is added here)
-                 → numbered Given/When/Then AC-##, edge cases; open the PR
+                 → numbered Given/When/Then AC-##, edge cases; the PR opens when the human asks
                  → human reads the walkthrough, reviews + merges in GitHub
 
 4. PLAN          → with scope locked, the MANAGER proposes a delivery plan: rough
@@ -97,4 +97,4 @@ ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 
 ## Change requests
 
-Someone wants to change an approved requirement or screen → any persona files a **GitHub issue labeled `change-request`** capturing the ask (requester's words verbatim) and the blast radius (read from `manifest.json`: which US/tests hang off the REQ, and which screens and components hang off the US). The PO decides on the issue. If accepted, the BA persona opens a new artifact PR updating BRD + affected stories + manifest — same gate, same review. The issue links the PR; nothing is edited outside a reviewed PR.
+Someone wants to change an approved requirement or screen → any persona files a **GitHub issue labeled `change-request`** capturing the ask (requester's words verbatim) and the blast radius (read from `manifest.json`: which US/tests hang off the REQ, and which screens and components hang off the US). The PO decides on the issue. If accepted, the BA persona drafts a new artifact PR updating BRD + affected stories + manifest — same gate, same review. The issue links the PR; nothing is edited outside a reviewed PR.

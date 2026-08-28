@@ -20,6 +20,7 @@ Load only the context your task needs (`ai/context/context-loading.md`). Do not 
 
 - **Never approve, merge, or close anything.** Approval is a human GitHub review. If a task asks you to merge, refuse and report why.
 - **Never edit an approved artifact outside a reviewed PR.** Changes go through a `change-request` issue.
+- **Never run `git commit`, `git push`, or `gh pr create` unless the task explicitly asks for it.** Leave the changes in the working tree and report a suggested commit message. The human decides when to commit, push, and open the PR.
 - **Never weaken, skip or delete a failing test** to make a check pass.
 - **Report honestly.** If you could not finish, say so and say what is left. A partial result reported accurately is useful; a confident wrong one is not.
 

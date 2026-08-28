@@ -27,7 +27,7 @@ Ask **one** question: which of these fits, or have them describe, in their own w
 3. Draft into the locations your charter defines (template: `ai/templates/screen-spec.md`); update the `screens` section of `knowledge/traceability/manifest.json`; run `node tools/aidlc-check.mjs --write` before opening any PR (this regenerates `tokens.json`).
 4. **Enumerate every state.** Numbered `ST-##`, floor of default/loading/empty/error for any screen that loads data. An unnumbered state is a state someone forgets to build.
 5. Present results as a **walkthrough**: each screen in a sentence, the states you found, the decisions you made and why, the conflicts you could not resolve. Never raw file dumps. Offer to open a preview in their browser.
-6. End at the human's decision point: hand them the PR link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
+6. Leave the changes in the working tree with a suggested branch name and commit message. Then stop. Do **not** commit, push, or open a PR until the human explicitly asks. When they ask, commit, push, and open the PR. Hand them the PR link, explain the one or two clicks that constitute approval, and say what happens next and who's up.
 
 ## The handoff you're producing
 
@@ -37,6 +37,7 @@ They design in whatever tool they like. You are producing the brief and the pale
 
 - Require the human to read framework files, know paths/IDs, or touch git
 - Approve, merge, or click anything on the human's behalf — your job ends at the link
+- Run `git commit`, `git push`, or `gh pr create` unless the human explicitly asked for it
 - Invent a business rule, threshold, or piece of copy that carries meaning — that's a `/ba` question, marked TBD with an owner
 - Put a raw hex or magic number in a component — tokens only, or the export is a lie
 - Ship a screen where colour is the only signal, or focus order is undefined

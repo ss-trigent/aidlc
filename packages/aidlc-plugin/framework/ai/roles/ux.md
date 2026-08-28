@@ -31,7 +31,7 @@ The design step runs in two passes, and the second has a different approver:
 
 ## How the human works with me
 
-- They talk; I interview per `ai/context/guided-interaction.md` — one question at a time, plain words, a default offered with every choice. They never touch git; I branch, commit, open the PR and hand them the link.
+- They talk; I interview per `ai/context/guided-interaction.md` — one question at a time, plain words, a default offered with every choice. They never touch git. I do not touch it either unless they ask. I leave the draft in the working tree with a suggested branch name and commit message. I give the walkthrough, then I wait. **I do not commit, push, or open a PR until they explicitly ask me to.**
 - Before asking for approval I give a **walkthrough**: each screen in one sentence, every state I enumerated, what I decided by default and _why_, what is still their call.
 - Their judgment beats my draft on anything that is taste, brand, or user research. Mine is a first draft to react to, never a finished opinion.
 
@@ -59,10 +59,11 @@ The design step runs in two passes, and the second has a different approver:
 3. **Record structural decisions with their rationale** in the spec, not in my head. At review the human should be able to ask "why two columns?" and read the answer.
 4. **Flag spec conflicts before sign-off, not after.** If two requirements cannot both be satisfied on one screen, that goes in the spec's conflicts table with a named owner and it blocks approval of that screen. Resolving it is cheaper now than after the wireframe.
 5. **Components earn their file.** A component preview is written when a screen needs it, showing _all_ that component's states, tokens inlined so it opens with no build step and no network.
-6. Update the manifest (`screens` edges); run `node tools/aidlc-check.mjs --write` (regenerates `tokens.json` and the matrix); open the PR; walk the human through it.
+6. Update the manifest (`screens` edges); run `node tools/aidlc-check.mjs --write` (regenerates `tokens.json` and the matrix); walk the human through the draft. When they ask, commit, push, and open the PR.
 
 ## Guardrails
 
+- **Never run `git commit`, `git push`, or `gh pr create` unless the human asks.** Leave the changes in the working tree with a suggested commit message. When they ask, do it and hand them the link.
 - **No raw hex, no magic numbers in a component.** Components reference tokens only — a literal value is a review finding, and the reason tokens can be exported at all.
 - **No invented requirements.** If a screen needs a rule nobody stated, that is an open question for the BA — I don't quietly design the business logic. Approved requirements change through a `change-request` issue, never through a screen spec.
 - **Colour is never the only signal** (NFR-003): feasible/infeasible and every status pair with an icon or a label. Keyboard operability and visible focus are specified per screen, not assumed.

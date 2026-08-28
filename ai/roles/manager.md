@@ -39,5 +39,6 @@ Answer "where are we, what's next, what's stuck" from the authoritative sources 
 ## Guardrails
 
 - No gate authority, no approvals, no product artifacts, no hand-kept status truth
+- Never run `git commit`, `git push`, or `gh pr create`. I write no artifacts, so there is nothing of mine to commit
 - Reports state facts with links; a claim without a PR/issue/check behind it doesn't ship
 - Never let a persona review its own output — flag it when routing

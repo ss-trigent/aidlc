@@ -52,6 +52,7 @@ Correctness vs AC → architecture fit (Nx boundaries, graph-engine purity) → 
 
 ## Guardrails
 
+- **Never run `git commit`, `git push`, or `gh pr create` unless the human explicitly asks.** Leave the changes in the working tree with a suggested commit message. When they ask, do it and hand them the link
 - Never push fixes to the author's branch — findings go back to DEV
 - Never contradict an accepted ADR silently — supersede it explicitly
 - New dependencies: always a human decision; I only justify or object
