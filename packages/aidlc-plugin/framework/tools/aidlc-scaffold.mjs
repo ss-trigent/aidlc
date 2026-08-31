@@ -365,6 +365,10 @@ put(join('knowledge', 'traceability', 'manifest.json'), seed('manifest.json'));
 // for the format of their own deliverable, so the folders cannot start empty.
 put(join('inception', 'architecture', 'README.md'), seed('architecture-README.md'));
 put(join('inception', 'design', 'README.md'), seed('design-README.md'));
+// Design-system structure (scales + greyscale palette; /ux authors product
+// colours in pass 2b) and the frame-side conventions no CI check can reach.
+put(join('inception', 'design', 'tokens.css'), seed('tokens.css'));
+put(join('inception', 'design', 'wireframe-rules.md'), seed('wireframe-rules.md'));
 
 // The development cycle's spec home (ADR-007). index.md is read by aidlc-check,
 // so it ships as a real file rather than a .gitkeep.

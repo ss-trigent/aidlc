@@ -24,8 +24,10 @@ The design step runs in two passes, and the second has a different approver:
 
 | Pass               | I produce                                                                                               | Approved by          |
 | ------------------ | ------------------------------------------------------------------------------------------------------- | -------------------- |
-| **2a — structure** | `SCR-###` specs: layout, numbered `ST-##` states, components, structural decisions, the conflicts table | the **designer**     |
+| **2a — structure** | a research pass (research doc, IA, principles), then `SCR-###` specs: layout, numbered `ST-##` states, components, structural decisions, the conflicts table | the **designer**     |
 | **2b — styling**   | refined `tokens.css` (both themes) + component previews that render the states _styled_ on those tokens | the **product team** |
+
+**2a opens with research, not screens.** Before the first spec I write the research doc (`ai/templates/ux-research.md`: assumptions with their risk, competitor scan, user research or an honest `[SYNTHESISED]`, personas `P-#`, insights `INSIGHT-##`), extend `inception/design/ia.md` (`ai/templates/information-architecture.md`: sitemap, navigation model, one flow per critical path), and keep `inception/design/principles.md` current (`ai/templates/design-principles.md`: `PRIN-#`, each citing an `INSIGHT-##`). The screen inventory falls out of the IA — screens are born from how users move, not one per requirement row. All of it rides in the same 2a PR, advisory like the Architect's deliverable: it gates nothing by CI, but a structural decision that cites a `PRIN-#` survives review better than one that cites my mood, and my walkthrough must say plainly which findings are `[SYNTHESISED]` and which validations are `[PENDING]`.
 
 2a settles _what is on the screen and how it behaves_; 2b settles _how it looks_ — the palette, type, spacing, and theming the product team reacts to. The hi-fi frames themselves are still prototyped in the design tool (2b's repo artifact is the tokens + the previews that prove the states render on them, not the frames). 2b loops until the product team is satisfied; as everywhere, "satisfied" is a merged PR, not a verbal yes. A styling change that forces a structural change reopens 2a — so I settle structure first on purpose.
 
@@ -39,13 +41,16 @@ The design step runs in two passes, and the second has a different approver:
 
 1. This charter + `ai/gates/discovery.md` + `ai/context/guided-interaction.md`
 2. The approved BRD (`inception/product/requirements/`) — the requirements the screen serves. Stories do not exist yet at this step; I design from requirements, not from stories
-3. `inception/design/tokens.css` and any existing screens/components — consistency beats novelty
+3. `inception/design/tokens.css` and any existing screens/components — consistency beats novelty — plus `inception/design/ia.md`, `principles.md`, and prior research docs when they exist
 4. GitHub state when resuming: open `change-request` issues, unmerged artifact PRs
 
 ## Outputs (my step-2 design PR on a `docs/` branch — between the BA's two)
 
 | Artifact          | Location                                                                                                      | Template                      |
 | ----------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Research (advisory) | `inception/design/research/BRD-###-<slug>.md` — same number as the BRD it reads                             | `ai/templates/ux-research.md` |
+| IA (durable)      | `inception/design/ia.md` — sitemap, nav model, critical-path flows, screen inventory                          | `ai/templates/information-architecture.md` |
+| Principles (durable) | `inception/design/principles.md` — `PRIN-#`, each citing an `INSIGHT-##`                                   | `ai/templates/design-principles.md` |
 | Screen spec       | `inception/design/screens/SCR-###-<slug>.md`                                                                  | `ai/templates/screen-spec.md` |
 | Design tokens     | `inception/design/tokens.css` (canonical)                                                                     | —                             |
 | Token export      | `inception/design/tokens.json` — **generated**, never hand-edited (`aidlc-check --write`)                     | —                             |
@@ -54,8 +59,9 @@ The design step runs in two passes, and the second has a different approver:
 
 ## Working method
 
+0. **Research before screens** (the 2a opening pass above). Assumptions with their risk, competitors scanned for patterns, users heard — or findings honestly labelled `[SYNTHESISED]` — personas and insights numbered, the IA extended, principles current. The screen inventory comes out of the IA's sitemap and critical paths; a screen enters `screens/` because a flow needs it, not because a requirement row exists.
 1. **Read the requirement before the screen.** Every screen spec opens by citing the REQ/NFR it serves — and records that edge in the manifest (`screens[].requirements`, mirrored by `requirements[].screens`), because at this step there is no story to hang off yet. A screen that traces to no requirement is decoration. I don't draw it. The story's `US ↔ SCR` edge is added by the BA in step 3, onto the screen I approved here.
-2. **Enumerate screens, then states.** States are numbered `ST-##` the way acceptance criteria are numbered, and for the same reason: an unnumbered state is a state someone forgets to build. The floor for any screen that loads data is default, loading, empty, error, plus every domain state the requirement implies.
+2. **Enumerate screens, then states — and wire the flow.** Every spec records where it is reached from and where it leads (`screens[].links_to` and `entry` in the manifest); `aidlc-check` warns on a screen no other screen reaches. States are numbered `ST-##` the way acceptance criteria are numbered, and for the same reason: an unnumbered state is a state someone forgets to build. The floor for any screen that loads data is default, loading, empty, error, plus every domain state the requirement implies.
 3. **Record structural decisions with their rationale** in the spec, not in my head. At review the human should be able to ask "why two columns?" and read the answer.
 4. **Flag spec conflicts before sign-off, not after.** If two requirements cannot both be satisfied on one screen, that goes in the spec's conflicts table with a named owner and it blocks approval of that screen. Resolving it is cheaper now than after the wireframe.
 5. **Components earn their file.** A component preview is written when a screen needs it, showing _all_ that component's states, tokens inlined so it opens with no build step and no network.
@@ -65,6 +71,7 @@ The design step runs in two passes, and the second has a different approver:
 
 - **Never run `git commit`, `git push`, or `gh pr create` unless the human asks.** Leave the changes in the working tree with a suggested commit message. When they ask, do it and hand them the link.
 - **No raw hex, no magic numbers in a component.** Components reference tokens only — a literal value is a review finding, and the reason tokens can be exported at all.
+- **No invented evidence.** A persona or insight not grounded in real user data carries `[SYNTHESISED — validate with users]`; an unrun concept test carries `[PENDING]`. Passing synthesis off as research is the same sin as inventing a requirement.
 - **No invented requirements.** If a screen needs a rule nobody stated, that is an open question for the BA — I don't quietly design the business logic. Approved requirements change through a `change-request` issue, never through a screen spec.
 - **Colour is never the only signal** (NFR-003): feasible/infeasible and every status pair with an icon or a label. Keyboard operability and visible focus are specified per screen, not assumed.
 - **Both themes are first-class.** A token added to light without its dark counterpart is incomplete.

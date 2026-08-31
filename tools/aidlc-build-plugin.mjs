@@ -100,7 +100,7 @@ files.set(
   JSON.stringify(
     {
       $comment:
-        'Traceability knowledge graph: REQ <-> US <-> tests, plus screens (US <-> SCR -> states/components), decisions (US -> ADR) and lessons-learned edges. Edited in the same PR as the artifacts it links; validated by tools/aidlc-check.mjs; traceability-matrix.md is generated from it (never hand-edited).',
+        'Traceability knowledge graph: REQ <-> US <-> tests, plus screens (US <-> SCR -> states/components, with flow edges: links_to[] between screens and "entry": true on roots), decisions (US -> ADR) and lessons-learned edges. Edited in the same PR as the artifacts it links; validated by tools/aidlc-check.mjs; traceability-matrix.md is generated from it (never hand-edited).',
       requirements: {},
       stories: {},
       screens: {},
@@ -169,10 +169,14 @@ What lives here, and what deliberately does not.
 
 | Here                       | Contains                                                                    |
 | -------------------------- | ----------------------------------------------------------------------------- |
+| \`research/BRD-###-<slug>.md\` | The 2a research pass: assumptions, competitor scan, personas, \`INSIGHT-##\` |
+| \`ia.md\`                    | Sitemap, navigation model, critical-path flows, the screen inventory         |
+| \`principles.md\`            | \`PRIN-#\` design principles, each citing the insight it derives from         |
 | \`screens/SCR-###-<slug>.md\` | Screen specs: purpose, every numbered \`ST-##\` state, a11y notes             |
 | \`components/\`              | One preview per component, each rendering the states it claims               |
 | \`tokens.css\`               | The design system's single source — colors, type, spacing, radius, elevation |
 | \`tokens.json\`              | **Generated** from \`tokens.css\` by \`aidlc-check --write\` — never hand-edited |
+| \`wireframe-rules.md\`       | Grid, layout discipline, frame naming — for the designer's tool or a frame-generating agent |
 
 **Not here: the visual design files.** Frames stay in Figma, Penpot, or whatever
 the designer uses. The tool imports \`tokens.json\`, so the design file and this
@@ -186,6 +190,9 @@ each has, and that a preview renders every one of them.
 - A screen's \`ST-##\` states match its manifest entry
 - Every state is rendered and marked in a preview: \`<!-- @state SCR-###/ST-## -->\`
 - Previews hold no raw hex — colors come from tokens
+- Previews reference semantic tokens only — \`--p-*\` primitives live inside \`tokens.css\`
+- Every screen is reachable: marked \`"entry": true\` or in another screen's \`links_to\`
+- Text-on-surface token pairs meet WCAG AA 4.5:1 (warning, both themes)
 - \`tokens.json\` is generated, never edited by hand
 
 Incomplete is a warning before delivery and an error on a \`feat/US-###\` branch.
@@ -197,6 +204,211 @@ spec and the preview, and updates the manifest. Consistency with what already
 exists beats a fresh idea — read the neighbouring specs and \`tokens.css\` first.
 
 Tailor this README to your project; it is yours from here.
+`,
+);
+// Seed design tokens: the SCALES are framework-owned form (step names the
+// checks and templates rely on); the PALETTE is a deliberate greyscale
+// wireframe set — /ux authors the product colours with the human in pass 2b
+// (ADR-008). Prefixes are the tokens.json export contract in aidlc-check.mjs.
+files.set(
+  join('framework', 'seed', 'tokens.css'),
+  `/* Design tokens — the single source. tokens.json is GENERATED from this file
+   by \`node tools/aidlc-check.mjs --write\`; the designer's tool imports the JSON.
+
+   Prefixes are the export contract: --c- color · --t- font size · --lh- line
+   height · --fw- weight · --f- family · --s- spacing · --r- radius ·
+   --shadow- elevation · --control- control heights.
+   --p-* are PRIMITIVES: raw values referenced only inside this file —
+   aidlc-check errors on a component preview that uses one directly.
+
+   The scales are seeds: keep the step names, retune values with the designer.
+   The palette is deliberately greyscale (wireframe-grade): /ux replaces the
+   --c-* aliases with the product palette in pass 2b, both themes, leaving the
+   structural scales untouched. */
+
+:root {
+  /* primitives — greyscale ramp */
+  --p-gray-0: #ffffff;
+  --p-gray-50: #f5f5f5;
+  --p-gray-100: #eeeeee;
+  --p-gray-200: #e0e0e0;
+  --p-gray-300: #bdbdbd;
+  --p-gray-600: #616161;
+  --p-gray-800: #424242;
+  --p-gray-850: #242424;
+  --p-gray-900: #1a1a1a;
+
+  /* color — semantic aliases; components reference ONLY these */
+  --c-surface: var(--p-gray-0);
+  --c-surface-raised: var(--p-gray-50);
+  --c-surface-overlay: var(--p-gray-100);
+  --c-border: var(--p-gray-200);
+  --c-border-strong: var(--p-gray-300);
+  --c-text: var(--p-gray-900);
+  --c-text-secondary: var(--p-gray-600);
+  --c-text-disabled: var(--p-gray-300);
+  --c-action: var(--p-gray-800);
+  --c-action-label: var(--p-gray-0);
+  --c-focus-ring: var(--p-gray-900);
+
+  /* spacing — closed scale, no values between steps */
+  --s-2: 2px;   /* icon-to-label gaps */
+  --s-4: 4px;   /* tight internal spacing */
+  --s-8: 8px;   /* default internal padding */
+  --s-12: 12px;
+  --s-16: 16px; /* default gap between elements */
+  --s-24: 24px; /* section internal padding */
+  --s-32: 32px;
+  --s-48: 48px; /* between major sections */
+  --s-64: 64px; /* page-level vertical rhythm */
+  --s-80: 80px;
+
+  /* type — sizes pair with line heights; body max line length 60–80ch */
+  --f-body: system-ui, sans-serif;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --t-display: 36px;    --lh-display: 44px;
+  --t-heading-xl: 30px; --lh-heading-xl: 38px;
+  --t-heading-lg: 24px; --lh-heading-lg: 32px;
+  --t-heading: 20px;    --lh-heading: 28px;
+  --t-heading-sm: 16px; --lh-heading-sm: 24px;
+  --t-body-lg: 18px;    --lh-body-lg: 28px;
+  --t-body: 16px;       --lh-body: 24px;
+  --t-body-sm: 14px;    --lh-body-sm: 20px;
+  --t-label: 12px;      --lh-label: 16px;
+
+  /* radius */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-full: 9999px;
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-2: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-3: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* control heights */
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 48px;
+
+  /* icon sizes */
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+}
+
+/* dark theme — override only what changes; tokens.json mirrors this split */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-surface: var(--p-gray-900);
+    --c-surface-raised: var(--p-gray-850);
+    --c-surface-overlay: var(--p-gray-800);
+    --c-border: var(--p-gray-800);
+    --c-border-strong: var(--p-gray-600);
+    --c-text: var(--p-gray-50);
+    --c-text-secondary: var(--p-gray-300);
+    --c-text-disabled: var(--p-gray-600);
+    --c-action: var(--p-gray-100);
+    --c-action-label: var(--p-gray-900);
+    --c-focus-ring: var(--p-gray-50);
+  }
+}
+`,
+);
+// Wireframe conventions: everything the frame side of the handoff needs that
+// no CI check can reach into the design tool to enforce. Written to work as
+// prompt material for a frame-generating agent as much as a checklist for a
+// human designer (ADR-008; the Figma-write loop itself is a later ADR).
+files.set(
+  join('framework', 'seed', 'wireframe-rules.md'),
+  `# Wireframe rules
+
+For whoever draws the frames — a designer in Figma/Penpot/Sketch, or a
+frame-generating agent. The repo holds the spec (\`screens/\`, \`tokens.css\`);
+these rules keep the frames matched to it. None of this is CI-enforced — it
+cannot be, the frames live in the tool — which is exactly why it is written down.
+
+## Frame naming — the one rule that ties a frame to the spec
+
+\`\`\`text
+WF / SCR-### · <Screen name> / ST-## <State name>     (wireframe)
+HF / SCR-### · <Screen name> / ST-## <State name>     (hi-fi)
+\`\`\`
+
+One frame per \`ST-##\` in the spec — the numbering is the checklist. A frame
+whose name matches no spec state is an orphan; a state with no frame is
+undrawn work hiding.
+
+## Grid
+
+Apply the grid before placing any content. Nothing sits outside the columns.
+
+| Breakpoint | Columns | Gutter | Margin | Frame width | Max content |
+| ---------- | ------- | ------ | ------ | ----------- | ----------- |
+| Desktop    | 12      | 24px   | 40px   | 1440px      | 1280px      |
+| Tablet     | 8       | 20px   | 24px   | 768px       | —           |
+| Mobile     | 4       | 16px   | 16px   | 390px       | —           |
+
+A persistent sidebar sits in columns 1–2; main content in 3–12.
+
+## Spacing
+
+All spacing from the \`--s-*\` scale in \`tokens.css\` — no in-between values.
+Component padding \`--s-8\`/\`--s-16\`, gaps between elements \`--s-16\` or
+\`--s-24\`, between sections \`--s-48\`, page rhythm \`--s-64\`.
+
+## Wireframes are greyscale
+
+Wireframes use only the greyscale \`--c-*\` set from \`tokens.css\`. Brand colour
+arrives in pass 2b, on tokens — never painted onto a frame first.
+
+## Layout discipline
+
+Every container is auto-layout; nothing is manually positioned.
+
+| Mode  | Behaviour                     | Use for                                  |
+| ----- | ----------------------------- | ---------------------------------------- |
+| FILL  | stretches to fill the parent  | page wrappers, sections, rows            |
+| HUG   | wraps its children            | buttons, tags, cards with variable content |
+| FIXED | explicit size                 | icons, avatars, images                   |
+
+Standard nesting: page frame (FILL) → layout wrapper (FILL, grid-constrained)
+→ section (FILL) → card (HUG) → header/body (FILL), footer actions (HUG).
+
+## Recurring page patterns
+
+Empty, error, loading, and page-header are designed once and reused — a screen
+spec's \`ST-##\` says *when* they appear, not what they look like. Empty states
+differ by context (first use, cleared by filter, no permission, nothing yet);
+errors differ by cause (not found, server, offline, forbidden) — reuse the
+pattern, vary the copy and recovery action. If a pattern component does not
+exist yet, it earns its preview the first time a screen needs it.
+
+In the design tool, name component variants \`Property=Value\` (\`Type=Primary,
+State=Hover\`) so a spec can reference a variant unambiguously.
+
+## Design-file organisation (suggestion, not a rule)
+
+A shared file needs an order whoever creates the pages. One that works:
+an index page first, then research boards (if kept in the tool), then one
+wireframe page per screen in \`SCR-###\` order, then design-system foundations
+and components, then hi-fi pages per screen. Keep the order stable; people
+navigate shared files by muscle memory.
+
+## Per-frame checklist
+
+- [ ] Grid applied, content inside columns
+- [ ] Auto-layout everywhere, modes per the table above
+- [ ] Spacing and colour from tokens only — no raw values
+- [ ] Reuse existing pattern components before drawing new shapes
+- [ ] Frame named \`WF / SCR-### · <name> / ST-## <state>\`
+- [ ] Every \`ST-##\` in the spec has its own frame
+
+Tailor this file to your project; it is yours from here.
 `,
 );
 // AI-DLC.md sends every new joiner to a root ONBOARDING.md, so the scaffold
@@ -564,7 +776,7 @@ You scaffold the AI-DLC framework from this plugin's bundled payload. The payloa
    4. Write \`ai/project-context.md\` from the interview: what the product is and for whom, domain terms, the stack, how to build/test/run. Personas read it before working, so a wrong sentence here misleads all of them — read it back to the human before moving on.
 
    These files are **project-owned**: \`ai/framework-lock.json\` deliberately excludes \`ai/standards/\`, \`ai/templates/jira/\` and \`ai/project-context.md\`, and the team edits them freely from now on. Everything else under \`ai/\` is framework-owned and hash-verified by \`aidlc-check\` (check 14) — a local edit there fails CI; framework changes go upstream as a change-request.
-4. **Confirm CI is real:** the scaffold wrote \`.github/workflows/aidlc-check.yml\` if the repo had no workflow running the validator; if the repo already had workflows, help the human add the step from \`$CLAUDE_PLUGIN_ROOT/framework/seed/ci-step.yml\` after dependency install. Either way, explain that branch protection with this status as required is what makes the gates real — and that on private GitHub Free repos it needs Pro or a public repo. The design system is deliberately not seeded — tokens are grounded in the specific product, so \`/ux\` authors \`inception/design/tokens.css\` with the human on the first UI story, and \`aidlc-check --write\` then generates the \`tokens.json\` export their design tool imports.
+4. **Confirm CI is real:** the scaffold wrote \`.github/workflows/aidlc-check.yml\` if the repo had no workflow running the validator; if the repo already had workflows, help the human add the step from \`$CLAUDE_PLUGIN_ROOT/framework/seed/ci-step.yml\` after dependency install. Either way, explain that branch protection with this status as required is what makes the gates real — and that on private GitHub Free repos it needs Pro or a public repo. The design system is seeded as **structure, not taste**: \`inception/design/tokens.css\` arrives with the framework's scales (spacing, type, radius, elevation, control heights) and a deliberately greyscale palette — \`/ux\` authors the product colours with the human in design pass 2b, and \`aidlc-check --write\` generates the \`tokens.json\` export their design tool imports. \`inception/design/wireframe-rules.md\` carries the frame-side conventions (grid, auto-layout, frame naming) the repo cannot CI-check.
 5. **Verify:** \`node tools/aidlc-check.mjs\` must exit green (warnings about empty scope are expected on a fresh install — the scaffold already ran it once; rerun after tailoring).
 6. **Mention the optional browser-test layer, do not install it.** Nothing so far installs Playwright and no gate needs it. If the human asks for browser/UI testing (now or later), it is one command: \`node tools/aidlc-scaffold.mjs --profile e2e --root <dir>\` — \`--root\` is their choice, no layout is assumed, and \`testDir\` in the generated \`playwright.config.ts\` becomes the only record of it. It also writes the Playwright MCP config in all four harness shapes. QA who do not hold this repo run the same command in their own repo and publish evidence back as a PR — with the cost stated in [ADR-006](../knowledge/decisions/ADR-006-e2e-testing-layer.md): cross-repo e2e cannot block a story PR.
 7. **Hand off:** tell the human the gates in one sentence each and that the next step is \`/ba\` with their first customer need — and \`/ux\` once a story has UI. The personas now live in the repository (step 2), so they arrive with every clone; the plugin stays useful as the upgrade vehicle and for scaffolding the next repo.

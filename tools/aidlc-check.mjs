@@ -436,6 +436,18 @@ if (manifest) {
         err(
           `inception/design/components/${c}/preview.html hard-codes colour (${[...new Set(hex)].slice(0, 3).join(', ')}) — components reference tokens only, or inception/design/tokens.json stops describing what renders`,
         );
+      // Primitives (--p-*) are tokens.css-internal: a component that reaches
+      // past the semantic layer pins itself to a raw value with a token name.
+      // Token-definition blocks (:root / theme overrides) are where aliasing
+      // primitives is the point, so they are excluded like the hex rule above.
+      const prim = html
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/[^{}]*(?::root|data-theme)[^{}]*\{[^}]*\}/g, '')
+        .match(/var\(\s*--p-[\w-]+/g);
+      if (prim)
+        err(
+          `inception/design/components/${c}/preview.html references primitive tokens directly (${[...new Set(prim.map((m) => m.replace(/var\(\s*/, '')))].slice(0, 3).join(', ')}) — components use semantic tokens; --p-* primitives are referenced only inside tokens.css`,
+        );
       previews.push(html);
     }
 
@@ -471,6 +483,88 @@ if (manifest) {
       const msg = `${us} has a "## UI" section but cites no screen — UI would ship undesigned (/ux owns inception/design/screens/)`;
       if (inDelivery.has(us)) err(msg);
       else warn(`${msg} (pre-delivery)`);
+    }
+  }
+
+  // flow edges: links_to targets resolve, and every screen is reachable.
+  // Vertical traceability (REQ -> SCR -> state) cannot see a screen no other
+  // screen leads to — it passes every check and no user ever finds it.
+  {
+    const inbound = new Set(
+      Object.values(screens).flatMap((s) => s.links_to ?? []),
+    );
+    for (const [scr, entry] of Object.entries(screens)) {
+      for (const t of entry.links_to ?? [])
+        if (!screens[t])
+          err(
+            `${scr} links_to ${t}, which is not a node in manifest.screens`,
+          );
+      if (Object.keys(screens).length > 1 && !entry.entry && !inbound.has(scr)) {
+        const msg = `${scr} is unreachable — no screen links_to it and it is not marked "entry": true (the flow lives in inception/design/ia.md)`;
+        if (screenInDelivery(entry)) err(msg);
+        else warn(`${msg} (pre-delivery)`);
+      }
+    }
+  }
+
+  // token contrast: WCAG AA 4.5:1 for text-on-surface pairs, per theme block.
+  // ponytail: pairs are picked by token-name heuristic (text* vs surface/bg*,
+  // skipping disabled/placeholder/inverse/overlay/hover); move to explicit
+  // pair annotations in tokens.css if real palettes make this too noisy.
+  const tokensCssPath = join(REPO, 'inception', 'design', 'tokens.css');
+  if (existsSync(tokensCssPath)) {
+    const css = read(tokensCssPath).replace(/\/\*[\s\S]*?\*\//g, '');
+    const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      sel: m[1].trim().replace(/\s+/g, ' '),
+      props: Object.fromEntries(
+        [...m[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((p) => [
+          p[1],
+          p[2].trim(),
+        ]),
+      ),
+    }));
+    const rootProps = blocks.find((b) => b.sel === ':root')?.props ?? {};
+    const luminance = (hexColor) => {
+      let h = hexColor.slice(1);
+      if (h.length === 3) h = [...h].map((ch) => ch + ch).join('');
+      const [r, g, b] = [0, 2, 4].map((i) => {
+        const v = parseInt(h.slice(i, i + 2), 16) / 255;
+        return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    for (const b of blocks) {
+      const map = { ...rootProps, ...b.props };
+      const resolve = (name, depth = 0) => {
+        const v = map[name];
+        if (!v || depth > 8) return null;
+        const ref = v.match(/var\(\s*(--[\w-]+)/);
+        if (ref) return resolve(ref[1], depth + 1);
+        return /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(v) ? v : null;
+      };
+      const names = Object.keys(map);
+      const texts = names.filter(
+        (n) => /text/.test(n) && !/disabled|placeholder|inverse/.test(n),
+      );
+      const surfaces = names.filter(
+        (n) =>
+          /(surface|bg|background)/.test(n) &&
+          !/inverse|overlay|hover/.test(n),
+      );
+      for (const t of texts)
+        for (const s of surfaces) {
+          const tc = resolve(t);
+          const sc = resolve(s);
+          if (!tc || !sc) continue;
+          const [hi, lo] = [luminance(tc), luminance(sc)].sort(
+            (x, y) => y - x,
+          );
+          const ratio = (hi + 0.05) / (lo + 0.05);
+          if (ratio < 4.5)
+            warn(
+              `tokens.css ${b.sel}: ${t} on ${s} is ${ratio.toFixed(2)}:1 — below WCAG AA 4.5:1`,
+            );
+        }
     }
   }
 

@@ -19,9 +19,13 @@ Raw customer need (saved verbatim in inception/product/inputs/)
                  → drafts lean BRD (REQ/NFR/RISK, business rules) on a docs/ branch
                  → loop with the human until requirements are frozen — merge = frozen
 
-2. DESIGN        2a STRUCTURE → UX drafts a SCR-### spec from each approved
-   (UX)             requirement it serves (SCR.requirements[]); states numbered
-                    ST-##, structural decisions + conflicts — approved by the DESIGNER
+2. DESIGN        2a STRUCTURE → UX opens with a research pass (research doc, IA
+   (UX)             sitemap + critical paths, principles — advisory, honestly
+                    labelled [SYNTHESISED]/[PENDING] where no user data exists),
+                    derives the screen inventory from the IA, then drafts a
+                    SCR-### spec per screen (SCR.requirements[], links_to/entry);
+                    states numbered ST-##, structural decisions + conflicts
+                    — approved by the DESIGNER
                  2b STYLING   → refined tokens.css (both themes) + previews that render
                     the states styled; the designer prototypes hi-fi frames in
                     Figma/Penpot/etc. (frames stay in the tool — inception/design/README.md)
@@ -65,7 +69,8 @@ ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 
 **Step 2 — design PR**
 
-- `inception/design/screens/SCR-###-<slug>.md` for each requirement that needs UI — purpose, layout, numbered `ST-##` states (default/loading/empty/error at minimum), components, accessibility, structural decisions with rationale, and a conflicts table that blocks sign-off while any row is open. The spec cites the `REQ-###`/`NFR-###` it serves, not a story, which does not exist yet.
+- `inception/design/research/BRD-###-<slug>.md`, `inception/design/ia.md`, `inception/design/principles.md` — the 2a research pass (templates: `ux-research.md`, `information-architecture.md`, `design-principles.md`). Advisory like the architecture: CI does not require them, but the designer reviews them in this PR, synthesised findings are labelled, and the screen inventory below comes from the IA.
+- `inception/design/screens/SCR-###-<slug>.md` for each screen in the IA inventory — purpose, place in the flow (reached-from / leads-to), layout, numbered `ST-##` states (default/loading/empty/error at minimum), components, accessibility, structural decisions with rationale (citing `PRIN-#` where one applies), and a conflicts table that blocks sign-off while any row is open. The spec cites the `REQ-###`/`NFR-###` it serves, not a story, which does not exist yet.
 - `inception/design/tokens.css` when the design system changes; `tokens.json` regenerated with `node tools/aidlc-check.mjs --write`
 - `knowledge/traceability/manifest.json` — the `screens` nodes with `requirements[]`, mirrored by `screens[]` on each cited requirement (`aidlc-check` fails a screen that traces to neither a story nor a requirement)
 
@@ -92,6 +97,8 @@ ARCHITECTURE are advisory: they inform delivery, they do not gate it.
 | Ambiguities grilled before drafting — the open-questions table is the residue, not an afterthought                                                                                 | Human review of the walkthrough                                                                                                                            |
 | Every UI story cites a screen; every screen traces to a story or a requirement and its states match its manifest entry and resolve to components; `tokens.json` is not hand-edited | `aidlc-check` (required CI status)                                                                                                                         |
 | Screen conflicts resolved before sign-off; states cover the real failure modes; colour is never the only signal                                                                    | Designer review — the persona presents the states as a checklist                                                                                           |
+| Every screen reachable (`entry` or linked from another screen); previews reference semantic tokens, never `--p-*` primitives; token contrast meets WCAG AA 4.5:1                   | `aidlc-check` — reachability warns pre-delivery and errors in delivery; primitive references are an error; contrast shortfalls warn                        |
+| Research honesty: `[SYNTHESISED]`/`[PENDING]` labels present where no user data or test exists                                                                                     | Designer review of the walkthrough — the persona must call these out                                                                                       |
 | Order held: design only after requirements are frozen, stories only after design is approved (scope locked)                                                                        | Charter + human review — the personas refuse to run ahead ([ADR-003](../../knowledge/decisions/ADR-003-discovery-reorder-stories-last.md)); not CI-blocked |
 | Approval identity + reviewed content                                                                                                                                               | GitHub review on the PR (protected `main`)                                                                                                                 |
 

@@ -7,12 +7,21 @@
 | **Serves**       | US-### (, US-###)                                    |
 | **Traces to**    | REQ-###, NFR-###                                     |
 | **Surface**      | `apps/ui` `features/<area>` — <route or entry point> |
-| **Primary user** | <the actor from the BRD>                             |
+| **Persona**      | P-# (<research doc>) — or the actor from the BRD     |
+| **Primary job**  | <what this persona is here to get done>              |
+| **Principle**    | PRIN-# — <how it applies here, one clause>           |
 | **Status**       | draft — awaiting designer review                     |
 
 ## Purpose
 
 One or two sentences: what the user is trying to accomplish here, and what "done" looks like for them. If this cannot be written without inventing a business rule, stop and raise it with `/ba`.
+
+## Place in the flow
+
+Where this screen sits in the IA (`inception/design/ia.md`), mirrored in `manifest.json` so an unreachable screen or dead-end journey is caught, not discovered.
+
+- **Reached from:** SCR-###, SCR-### — or `entry` (a root the user lands on directly)
+- **Leads to:** SCR-###, SCR-### (`screens[].links_to` in the manifest)
 
 ## Layout
 
@@ -75,4 +84,4 @@ Blocks approval of this screen until each row has a resolution. A conflict resol
 
 ## Designer handoff
 
-Tokens: `inception/design/tokens.json` (W3C DTCG — importable into Figma via Tokens Studio, Penpot, and others). Draw one frame per `ST-##` above; the numbering is the checklist.
+Tokens: `inception/design/tokens.json` (W3C DTCG — importable into Figma via Tokens Studio, Penpot, and others). Draw one frame per `ST-##` above; the numbering is the checklist. Name each frame `WF / SCR-### · <screen> / ST-## <state>` (`HF /` once styled) — the name is the only thing that ties a frame back to this spec. Grid, spacing, and the per-frame checklist: `inception/design/wireframe-rules.md`.
