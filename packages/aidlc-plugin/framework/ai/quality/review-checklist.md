@@ -27,7 +27,7 @@ Used by DEV for self-review and by the Architect persona for advisory review, bo
 
 ## 5. Accessibility (UI diffs)
 
-- [ ] Keyboard reachable, focus visible, labels/ARIA present, contrast per tokens
+- [ ] Keyboard reachable, focus visible, labels/ARIA present, contrast at least 4.5:1 (WCAG AA; `aidlc-check` warns on failing token pairs)
 
 ## 6. Framework practice
 

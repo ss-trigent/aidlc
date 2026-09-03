@@ -4,8 +4,8 @@
    Prefixes are the export contract: --c- color · --t- font size · --lh- line
    height · --fw- weight · --f- family · --s- spacing · --r- radius ·
    --shadow- elevation · --control- control heights.
-   --p-* are PRIMITIVES: raw values referenced only inside this file —
-   aidlc-check errors on a component preview that uses one directly.
+   --p-* are PRIMITIVES: raw values aliased only inside this file. The design
+   tool's library binds to the semantic names, never to a primitive.
 
    The scales are seeds: keep the step names, retune values with the designer.
    The palette is deliberately greyscale (wireframe-grade): /ux replaces the

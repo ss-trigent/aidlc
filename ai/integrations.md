@@ -38,7 +38,7 @@ The source methodology's phases 2–3 produced wireframes and Figma frames as th
 | ----------------------------------------------------------------------------- | -------------------------------------------------- |
 | `SCR-###` screen specs — numbered `ST-##` states, rules, decisions, conflicts | Wireframes, high-fidelity frames, flows            |
 | `tokens.css` (canonical) + generated `tokens.json` in **W3C DTCG** format     | The imported token set, applied to frames          |
-| Component previews — real HTML, real tokens, all states marked                | Exploration, variants, annotation, comment threads |
+| `wireframe-rules.md` — grid, frame naming, per-frame checklist                | Frames, components, variants, annotation, comments |
 
 `tokens.json` imports into **Figma (Tokens Studio), Penpot, Style Dictionary**, or anything else reading DTCG. Because it is generated from `tokens.css` and CI fails on drift, the palette a designer draws with cannot diverge from the palette the product ships, which is the one guarantee a Figma-first workflow could never give.
 
@@ -52,7 +52,7 @@ No tool is mandated, no tool is declined. Adding one costs nothing in this frame
 
 **Direction of truth is one-way.** `inception/design/` is canonical. A Claude Design project is a _rendered view_ for people who should not have to read a repository — a product owner, an architect. Nothing is authored there and pulled down; that would put a Gate 1 artifact outside version control. The same is true of any Figma library built from `tokens.json`: it is a view.
 
-Status: screens, tokens and the first component preview exist; **sync is not enabled yet** and no project has been written to. See [`inception/design/README.md`](../inception/design/README.md).
+Status: screens and tokens exist; **sync is not enabled yet** and no project has been written to. See [`inception/design/README.md`](../inception/design/README.md).
 
 ### Jira — tracking and client visibility, never approval
 
@@ -89,6 +89,8 @@ Adopted 2026-08-03 ([ADR-005](../knowledge/decisions/ADR-005-multi-tool-persona-
 Personas may use MCP servers for **reference and context**: library documentation, workspace queries, reading external state. Currently configured: Nx (workspace/task queries), Context7 (library documentation), and — where the e2e layer is installed — Playwright (browser automation).
 
 **Playwright MCP is the one exception to "read-only", and it is scoped rather than waved through.** It drives a browser, so it writes to a running application: that is the point, since a locator verified against the real DOM is the difference between a generated test and a guessed one. What keeps it inside the boundary below is *what* it may touch — a test environment, never a gate. It may not act against production, and nothing it does approves, merges, deploys, or edits an approved artifact. The trade-off is recorded in [ADR-006](../knowledge/decisions/ADR-006-e2e-testing-layer.md).
+
+**Figma MCP is the second scoped exception, and it is conditional.** When a team has connected one, `/ux` may use it at the end of the design step to push greyscale wireframe frames — one per `ST-##`, named per `inception/design/wireframe-rules.md` — generated from the approved screen spec and tokens. What keeps it inside the boundary: frames are not gate artifacts (the spec PR is what merges), the sync is one-way from repo to tool, and it runs only when the human asks. The persona must first make sure that the connector can create frames; a read-only connector is reported as such and nothing is pushed. No connector, no step — the handoff is `tokens.json` plus the spec. Recorded in [ADR-008](../knowledge/decisions/ADR-008-ux-research-pass-and-wireframe-conventions.md).
 
 **The boundary:** a persona must not use a write-capable MCP tool to do anything a gate governs. Nothing that merges a PR, approves a review, deploys, edits an approved artifact outside a reviewed PR, or writes project status. If an MCP server offers such a capability, using it is a gate bypass regardless of how convenient it is.
 

@@ -39,10 +39,11 @@
 //      ticket keys are well-formed. Jira is a tracking mirror, so a MISSING key
 //      is never an error — Jira going away must not break the build.
 //  11. design is enforced, not conventional: a story with a UI section cites a
-//      screen; a screen's ST-## states match its manifest entry and are each
-//      rendered+marked in one of its component previews; component previews
-//      exist and contain no raw hex; inception/design/tokens.json is generated
-//      from tokens.css (the designer's tool-agnostic export) and never hand-edited
+//      screen; a screen's ST-## states match its manifest entry; every screen
+//      is reachable (entry, or another screen's links_to); text-on-surface
+//      token pairs meet WCAG AA 4.5:1 (warning); inception/design/tokens.json
+//      is generated from tokens.css (the designer's tool-agnostic export) and
+//      never hand-edited. Frames live in the design tool (ADR-008)
 //  13. the per-tool persona surfaces (Cursor, opencode, GitHub Copilot) match
 //      their .claude/ sources (tools/aidlc-build-surfaces.mjs --check, ADR-005)
 //  15. cross-repo e2e evidence (knowledge/traceability/e2e-coverage.json) is
@@ -336,12 +337,12 @@ if (manifest) {
     }
   }
 
-  // ---- 11. design edges: story <-> screen <-> state <-> component ----------
-  // The design phase is only "enforced" if a missing screen, an undesigned
-  // state, or a component that does not exist can fail a build. Same shape as
-  // the AC/test rule: incomplete is a warning before delivery and an error
-  // once the story is on its feat/ branch, because that is the last moment
-  // the gap is still cheap.
+  // ---- 11. design edges: story <-> screen <-> state, screen -> screen -------
+  // The design phase is only "enforced" if a missing screen, an unlisted
+  // state, or an unreachable screen can fail a build. Frames live in the
+  // design tool (ADR-008), so this is what the repo can still prove. Same
+  // shape as the AC/test rule: incomplete is a warning before delivery and an
+  // error once the story is on its feat/ branch, the last cheap moment.
   const screens = manifest.screens ?? {};
   const screenInDelivery = (entry) =>
     (entry.stories ?? []).some((us) => inDelivery.has(us));
@@ -402,69 +403,6 @@ if (manifest) {
         );
     }
 
-    // components exist, are token-only, and cover every state
-    const previews = [];
-    for (const c of entry.components ?? []) {
-      const p = join(
-        REPO,
-        'inception',
-        'design',
-        'components',
-        c,
-        'preview.html',
-      );
-      if (!existsSync(p)) {
-        err(
-          `${scr}: component "${c}" has no preview at inception/design/components/${c}/preview.html`,
-        );
-        continue;
-      }
-      const html = read(p);
-      if (!/^\s*<!--\s*@dsCard\b/.test(html))
-        err(
-          `inception/design/components/${c}/preview.html must open with its card marker <!-- @dsCard group="…" --> (inception/design/README.md)`,
-        );
-      // Raw colour literals defeat the token export the designer imports.
-      // Previews inline the token definitions on purpose (they must open with
-      // no build step), so the :root blocks are exactly where hex belongs and
-      // are excluded — everywhere else, a literal is a finding.
-      const hex = html
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/:root\s*\{[^}]*\}/g, '')
-        .match(/#[0-9a-fA-F]{3,8}\b/g);
-      if (hex)
-        err(
-          `inception/design/components/${c}/preview.html hard-codes colour (${[...new Set(hex)].slice(0, 3).join(', ')}) — components reference tokens only, or inception/design/tokens.json stops describing what renders`,
-        );
-      // Primitives (--p-*) are tokens.css-internal: a component that reaches
-      // past the semantic layer pins itself to a raw value with a token name.
-      // Token-definition blocks (:root / theme overrides) are where aliasing
-      // primitives is the point, so they are excluded like the hex rule above.
-      const prim = html
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/[^{}]*(?::root|data-theme)[^{}]*\{[^}]*\}/g, '')
-        .match(/var\(\s*--p-[\w-]+/g);
-      if (prim)
-        err(
-          `inception/design/components/${c}/preview.html references primitive tokens directly (${[...new Set(prim.map((m) => m.replace(/var\(\s*/, '')))].slice(0, 3).join(', ')}) — components use semantic tokens; --p-* primitives are referenced only inside tokens.css`,
-        );
-      previews.push(html);
-    }
-
-    if ((entry.components ?? []).length === 0) {
-      const msg = `${scr} lists no components — its states are specified but nothing renders them`;
-      if (screenInDelivery(entry)) err(msg);
-      else warn(`${msg} (pre-delivery)`);
-    } else {
-      const rendered = previews.join('\n');
-      for (const st of entry.states ?? []) {
-        if (!new RegExp(`@state\\s+${scr}/${st}\\b`).test(rendered)) {
-          const msg = `${scr}: no component preview renders ${st} — mark it with <!-- @state ${scr}/${st} --> where that state is shown`;
-          if (screenInDelivery(entry)) err(msg);
-          else warn(`${msg} (pre-delivery)`);
-        }
-      }
-    }
   }
 
   // reverse edge: a story with UI must name the screen that serves it
@@ -490,21 +428,47 @@ if (manifest) {
   // Vertical traceability (REQ -> SCR -> state) cannot see a screen no other
   // screen leads to — it passes every check and no user ever finds it.
   {
-    const inbound = new Set(
-      Object.values(screens).flatMap((s) => s.links_to ?? []),
+    const entries = Object.entries(screens);
+    const linksOf = new Map(
+      entries.map(([scr, e]) => {
+        const raw = e.links_to ?? [];
+        if (Array.isArray(raw)) return [scr, raw];
+        err(
+          `${scr}: "links_to" must be an array of SCR-### ids, got ${JSON.stringify(raw)}`,
+        );
+        return [scr, []];
+      }),
     );
-    for (const [scr, entry] of Object.entries(screens)) {
-      for (const t of entry.links_to ?? [])
+    for (const [scr, targets] of linksOf)
+      for (const t of targets)
         if (!screens[t])
-          err(
-            `${scr} links_to ${t}, which is not a node in manifest.screens`,
+          err(`${scr} links_to ${t}, which is not a node in manifest.screens`);
+
+    const flag = (msg, delivering) =>
+      delivering ? err(msg) : warn(`${msg} (pre-delivery)`);
+    const roots = entries.filter(([, e]) => e.entry).map(([scr]) => scr);
+    if (entries.length > 0 && roots.length === 0)
+      flag(
+        `no screen is marked "entry": true — the flow has no root the user lands on (inception/design/ia.md)`,
+        entries.some(([, e]) => screenInDelivery(e)),
+      );
+    // Reachability is a walk from the entry set, not "has an inbound edge":
+    // a cluster that only links to itself would otherwise pass.
+    const seen = new Set(roots);
+    const queue = [...roots];
+    while (queue.length)
+      for (const t of linksOf.get(queue.shift()) ?? [])
+        if (screens[t] && !seen.has(t)) {
+          seen.add(t);
+          queue.push(t);
+        }
+    if (roots.length > 0)
+      for (const [scr, e] of entries)
+        if (!seen.has(scr))
+          flag(
+            `${scr} is unreachable from any entry screen — no path of links_to leads to it (inception/design/ia.md)`,
+            screenInDelivery(e),
           );
-      if (Object.keys(screens).length > 1 && !entry.entry && !inbound.has(scr)) {
-        const msg = `${scr} is unreachable — no screen links_to it and it is not marked "entry": true (the flow lives in inception/design/ia.md)`;
-        if (screenInDelivery(entry)) err(msg);
-        else warn(`${msg} (pre-delivery)`);
-      }
-    }
   }
 
   // token contrast: WCAG AA 4.5:1 for text-on-surface pairs, per theme block.
@@ -513,17 +477,13 @@ if (manifest) {
   // pair annotations in tokens.css if real palettes make this too noisy.
   const tokensCssPath = join(REPO, 'inception', 'design', 'tokens.css');
   if (existsSync(tokensCssPath)) {
+    // Same light/dark split as the tokens.json export: everything before the
+    // first @media is the light theme, the @media block overrides it.
     const css = read(tokensCssPath).replace(/\/\*[\s\S]*?\*\//g, '');
-    const blocks = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-      sel: m[1].trim().replace(/\s+/g, ' '),
-      props: Object.fromEntries(
-        [...m[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((p) => [
-          p[1],
-          p[2].trim(),
-        ]),
-      ),
-    }));
-    const rootProps = blocks.find((b) => b.sel === ':root')?.props ?? {};
+    const cut = css.indexOf('@media');
+    const light = cssProps(cut === -1 ? css : css.slice(0, cut));
+    const themes = [['light', light]];
+    if (cut !== -1) themes.push(['dark', { ...light, ...cssProps(css.slice(cut)) }]);
     const luminance = (hexColor) => {
       let h = hexColor.slice(1);
       if (h.length === 3) h = [...h].map((ch) => ch + ch).join('');
@@ -533,8 +493,7 @@ if (manifest) {
       });
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
-    for (const b of blocks) {
-      const map = { ...rootProps, ...b.props };
+    for (const [theme, map] of themes) {
       const resolve = (name, depth = 0) => {
         const v = map[name];
         if (!v || depth > 8) return null;
@@ -551,6 +510,13 @@ if (manifest) {
           /(surface|bg|background)/.test(n) &&
           !/inverse|overlay|hover/.test(n),
       );
+      // Silence must be visible: a colour the check cannot read is reported,
+      // not skipped, or the rule vanishes exactly when real palettes arrive.
+      const unreadable = [...texts, ...surfaces].filter((n) => !resolve(n));
+      if (unreadable.length)
+        warn(
+          `tokens.css (${theme}): contrast not checked for ${unreadable.join(', ')} — only 3/6-digit hex (or var() chains ending in one) can be measured`,
+        );
       for (const t of texts)
         for (const s of surfaces) {
           const tc = resolve(t);
@@ -562,25 +528,9 @@ if (manifest) {
           const ratio = (hi + 0.05) / (lo + 0.05);
           if (ratio < 4.5)
             warn(
-              `tokens.css ${b.sel}: ${t} on ${s} is ${ratio.toFixed(2)}:1 — below WCAG AA 4.5:1`,
+              `tokens.css (${theme}): ${t} on ${s} is ${ratio.toFixed(2)}:1 — below WCAG AA 4.5:1`,
             );
         }
-    }
-  }
-
-  // components nobody references are speculative library, not design
-  const componentsDir = join(REPO, 'inception', 'design', 'components');
-  if (existsSync(componentsDir)) {
-    const referenced = new Set(
-      Object.values(screens).flatMap((s) => s.components ?? []),
-    );
-    for (const name of readdirSync(componentsDir)) {
-      if (name.startsWith('.')) continue;
-      if (!statSync(join(componentsDir, name)).isDirectory()) continue;
-      if (!referenced.has(name))
-        warn(
-          `component "${name}" is referenced by no screen — a component earns its file when a screen needs it`,
-        );
     }
   }
 
@@ -670,21 +620,42 @@ const TOKEN_GROUPS = [
   ['shadow-', 'shadow', null],
   ['motion-', 'motion', null],
   ['control-', 'control', 'dimension'],
+  ['icon-', 'icon', 'dimension'],
 ];
 
-function tokensFrom(css) {
+// `--name: value;` pairs of a CSS chunk, as { '--name': 'value' }.
+function cssProps(css) {
+  return Object.fromEntries(
+    [...css.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((m) => [
+      m[1],
+      m[2].replace(/\s+/g, ' ').trim(),
+    ]),
+  );
+}
+
+function tokensFrom(css, base = {}) {
+  const own = cssProps(css);
+  const all = { ...base, ...own };
+  // Aliases are resolved so the design tool gets a value it can bind to;
+  // --p-* primitives are tokens.css-internal (ADR-008) and are not exported,
+  // so nothing in the tool can bind to one.
+  const resolve = (v, depth = 0) => {
+    const ref = v.match(/^var\(\s*(--[\w-]+)\s*\)$/);
+    if (!ref || depth > 8 || all[ref[1]] === undefined) return v;
+    return resolve(all[ref[1]], depth + 1);
+  };
   const out = {};
-  for (const m of css.matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
-    const name = m[1];
-    const value = m[2].replace(/\s+/g, ' ').trim();
+  for (const [cssName, value] of Object.entries(own)) {
+    const name = cssName.slice(2);
+    if (name.startsWith('p-')) continue;
     const hit = TOKEN_GROUPS.find(([prefix]) => name.startsWith(prefix));
     const [prefix, group, type] = hit ?? [null, 'other', null];
     const key = prefix ? name.slice(prefix.length) : name;
     out[group] ??= {};
     out[group][key] = {
       ...(type ? { $type: type } : {}),
-      $value: value,
-      $extensions: { 'css.variable': `--${name}` },
+      $value: resolve(value),
+      $extensions: { 'css.variable': cssName },
     };
   }
   return out;
@@ -692,10 +663,12 @@ function tokensFrom(css) {
 
 function generateTokens(css) {
   // The dark set is the @media (prefers-color-scheme: dark) override block —
-  // deliberately partial, exactly like the stylesheet it comes from.
+  // deliberately partial, exactly like the stylesheet it comes from. It
+  // resolves against the light set so a dark alias to a light primitive works.
   const cut = css.indexOf('@media');
-  const light = tokensFrom(cut === -1 ? css : css.slice(0, cut));
-  const dark = cut === -1 ? {} : tokensFrom(css.slice(cut));
+  const lightCss = cut === -1 ? css : css.slice(0, cut);
+  const light = tokensFrom(lightCss);
+  const dark = cut === -1 ? {} : tokensFrom(css.slice(cut), cssProps(lightCss));
   return (
     JSON.stringify(
       {

@@ -59,7 +59,7 @@ spec's `ST-##` says *when* they appear, not what they look like. Empty states
 differ by context (first use, cleared by filter, no permission, nothing yet);
 errors differ by cause (not found, server, offline, forbidden) — reuse the
 pattern, vary the copy and recovery action. If a pattern component does not
-exist yet, it earns its preview the first time a screen needs it.
+exist yet, it earns its place in the library the first time a screen needs it.
 
 In the design tool, name component variants `Property=Value` (`Type=Primary,
 State=Hover`) so a spec can reference a variant unambiguously.

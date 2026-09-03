@@ -100,7 +100,7 @@ files.set(
   JSON.stringify(
     {
       $comment:
-        'Traceability knowledge graph: REQ <-> US <-> tests, plus screens (US <-> SCR -> states/components, with flow edges: links_to[] between screens and "entry": true on roots), decisions (US -> ADR) and lessons-learned edges. Edited in the same PR as the artifacts it links; validated by tools/aidlc-check.mjs; traceability-matrix.md is generated from it (never hand-edited).',
+        'Traceability knowledge graph: REQ <-> US <-> tests, plus screens (US <-> SCR -> states, with flow edges: links_to[] between screens and "entry": true on roots), decisions (US -> ADR) and lessons-learned edges. Edited in the same PR as the artifacts it links; validated by tools/aidlc-check.mjs; traceability-matrix.md is generated from it (never hand-edited).',
       requirements: {},
       stories: {},
       screens: {},
@@ -173,7 +173,6 @@ What lives here, and what deliberately does not.
 | \`ia.md\`                    | Sitemap, navigation model, critical-path flows, the screen inventory         |
 | \`principles.md\`            | \`PRIN-#\` design principles, each citing the insight it derives from         |
 | \`screens/SCR-###-<slug>.md\` | Screen specs: purpose, every numbered \`ST-##\` state, a11y notes             |
-| \`components/\`              | One preview per component, each rendering the states it claims               |
 | \`tokens.css\`               | The design system's single source — colors, type, spacing, radius, elevation |
 | \`tokens.json\`              | **Generated** from \`tokens.css\` by \`aidlc-check --write\` — never hand-edited |
 | \`wireframe-rules.md\`       | Grid, layout discipline, frame naming — for the designer's tool or a frame-generating agent |
@@ -182,15 +181,13 @@ What lives here, and what deliberately does not.
 the designer uses. The tool imports \`tokens.json\`, so the design file and this
 repo agree on the values without either owning the other. What this folder holds
 is the part a reviewer must be able to check: which screens exist, which states
-each has, and that a preview renders every one of them.
+each has, and how the screens connect. Frames are drawn from it — by the
+designer, or by \`/ux\` through a Figma connector when one is present.
 
 ## Rules \`aidlc-check\` enforces
 
 - A story with a \`## UI\` section cites a screen
 - A screen's \`ST-##\` states match its manifest entry
-- Every state is rendered and marked in a preview: \`<!-- @state SCR-###/ST-## -->\`
-- Previews hold no raw hex — colors come from tokens
-- Previews reference semantic tokens only — \`--p-*\` primitives live inside \`tokens.css\`
 - Every screen is reachable: marked \`"entry": true\` or in another screen's \`links_to\`
 - Text-on-surface token pairs meet WCAG AA 4.5:1 (warning, both themes)
 - \`tokens.json\` is generated, never edited by hand
@@ -200,7 +197,7 @@ Incomplete is a warning before delivery and an error on a \`feat/US-###\` branch
 ## Adding a screen
 
 Run \`/ux\`. It interviews you, numbers the states so none are skipped, writes the
-spec and the preview, and updates the manifest. Consistency with what already
+spec, and updates the manifest. Consistency with what already
 exists beats a fresh idea — read the neighbouring specs and \`tokens.css\` first.
 
 Tailor this README to your project; it is yours from here.
@@ -218,8 +215,8 @@ files.set(
    Prefixes are the export contract: --c- color · --t- font size · --lh- line
    height · --fw- weight · --f- family · --s- spacing · --r- radius ·
    --shadow- elevation · --control- control heights.
-   --p-* are PRIMITIVES: raw values referenced only inside this file —
-   aidlc-check errors on a component preview that uses one directly.
+   --p-* are PRIMITIVES: raw values aliased only inside this file. The design
+   tool's library binds to the semantic names, never to a primitive.
 
    The scales are seeds: keep the step names, retune values with the designer.
    The palette is deliberately greyscale (wireframe-grade): /ux replaces the
@@ -386,7 +383,7 @@ spec's \`ST-##\` says *when* they appear, not what they look like. Empty states
 differ by context (first use, cleared by filter, no permission, nothing yet);
 errors differ by cause (not found, server, offline, forbidden) — reuse the
 pattern, vary the copy and recovery action. If a pattern component does not
-exist yet, it earns its preview the first time a screen needs it.
+exist yet, it earns its place in the library the first time a screen needs it.
 
 In the design tool, name component variants \`Property=Value\` (\`Type=Primary,
 State=Hover\`) so a spec can reference a variant unambiguously.
@@ -498,7 +495,7 @@ for a fresh \`go\` rather than quietly widening the diff.
 | \`ai/\`                     | The framework: role charters, gates, standards, templates   |
 | \`inception/product/\`      | Requirements (\`REQ-###\`)                                     |
 | \`inception/stories/\`      | Stories (\`US-###\`) and their numbered acceptance criteria    |
-| \`inception/design/\`       | Screen specs, design tokens, component previews             |
+| \`inception/design/\`       | Research, IA, screen specs, design tokens, wireframe rules  |
 | \`inception/architecture/\` | DB design + app architecture                                |
 | \`inception/specs/\`        | One folder per story being built: technical requirements, the approved plan, impact, decisions, traceability |
 | \`knowledge/\`              | Traceability manifest and architecture decisions (\`ADR-###\`) |

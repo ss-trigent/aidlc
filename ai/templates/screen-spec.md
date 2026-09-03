@@ -1,6 +1,6 @@
 # SCR-### — <Screen name>
 
-> Approval = Gate 1 review of this file's PR. A state is "designed" when a component preview renders it and marks it `<!-- @state SCR-###/ST-## -->`.
+> Approval = Gate 1 review of this file's PR. A state is "designed" when it is numbered here, listed in the manifest, and drawn as its own frame in the design tool (`WF / SCR-### · <screen> / ST-## <state>`).
 
 |                  |                                                      |
 | ---------------- | ---------------------------------------------------- |
@@ -53,11 +53,11 @@ Numbered like acceptance criteria, and for the same reason: an unnumbered state 
 
 ## Components
 
-| Component | Preview                                           | Notes            |
-| --------- | ------------------------------------------------- | ---------------- |
-| `<name>`  | `inception/design/components/<name>/preview.html` | <states covered> |
+| Component | Used for                        | States it appears in |
+| --------- | ------------------------------- | -------------------- |
+| `<name>`  | <role on this screen>           | ST-##, ST-##         |
 
-Components are declared in `knowledge/traceability/manifest.json` under this screen; `aidlc-check` proves each preview file exists.
+The library components this screen uses, by name. The designer builds them in the tool on the tokens; a component no screen lists is speculative library, not design.
 
 ## Interaction and accessibility
 
