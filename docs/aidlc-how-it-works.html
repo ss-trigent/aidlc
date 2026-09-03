@@ -499,8 +499,9 @@
           Discovery runs as <b>three pull requests in order, with stories last</b> (<code>ADR-003</code>).
           So nobody writes a story against scope that still moves. Design runs in two passes
           (<code>ADR-004</code>). The structure pass produces the screen spec, and the designer
-          approves it. The styling pass produces tokens and rendered previews, and the product team
-          approves it. Hi-fi frames stay in the design tool. <b>The charter enforces this order. CI
+          approves it. The styling pass produces tokens for both themes, and the product team
+          approves it. Frames stay in the design tool, drawn by the designer or synced there by
+          <code>/ux</code> when a Figma connector is present. <b>The charter enforces this order. CI
           does not.</b> The personas refuse to run ahead, and the human review holds the line. We
           chose this over a new gate check.
         </p>
@@ -737,8 +738,8 @@
         <div class="hop">
           <div class="node">/ux</div>
           <div class="desc"><span class="gt">Gate 1 · design, styling</span>
-            Same persona, second pass. It produces design tokens for both themes and previews that
-            render every state with styling. The designer takes the exported tokens into Figma or
+            Same persona, second pass. It produces design tokens for both themes and regenerates the
+            export. The designer takes the exported tokens into Figma or
             Penpot for hi-fi frames. The frames stay in the tool. <b>The product team approves the
             styling.</b> <b>Cycle:</b> if a styling change forces a structural change, the structure
             pass reopens.</div>
@@ -1082,7 +1083,8 @@
           <ul>
             <li><b>Screen specs</b>Purpose, layout, every numbered state, accessibility, decisions with reasons, and the conflicts that block sign-off.</li>
             <li><b>Design tokens</b>One canonical stylesheet, plus a generated export in the W3C standard format.</li>
-            <li><b>Component previews</b>Real HTML on real tokens, every state marked. No build step, no network.</li>
+            <li><b>Research, IA and principles</b>Who the users are, how the screens connect, and the principles each structural decision cites.</li>
+            <li><b>Wireframe rules</b>Grid, layout discipline and frame naming, so every frame in the tool maps back to a numbered state.</li>
           </ul>
         </div>
         <div class="pane tool">
@@ -1323,7 +1325,7 @@
         <div class="ask">
           <h4>Does the graph need a code edge? <span class="chip k-teal">Open</span></h4>
           <p>Neither the design path nor the test path has a code edge. The merge commit of the story
-          PR is the cheapest way to close it. It also lets a component preview trace to the code that
+          PR is the cheapest way to close it. It also lets a screen state trace to the code that
           implements it.</p>
         </div>
         <div class="ask">

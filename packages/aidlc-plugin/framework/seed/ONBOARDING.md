@@ -81,7 +81,7 @@ for a fresh `go` rather than quietly widening the diff.
 | `ai/`                     | The framework: role charters, gates, standards, templates   |
 | `inception/product/`      | Requirements (`REQ-###`)                                     |
 | `inception/stories/`      | Stories (`US-###`) and their numbered acceptance criteria    |
-| `inception/design/`       | Screen specs, design tokens, component previews             |
+| `inception/design/`       | Research, IA, screen specs, design tokens, wireframe rules  |
 | `inception/architecture/` | DB design + app architecture                                |
 | `inception/specs/`        | One folder per story being built: technical requirements, the approved plan, impact, decisions, traceability |
 | `knowledge/`              | Traceability manifest and architecture decisions (`ADR-###`) |

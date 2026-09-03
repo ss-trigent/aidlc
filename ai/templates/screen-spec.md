@@ -1,18 +1,27 @@
 # SCR-### — <Screen name>
 
-> Approval = Gate 1 review of this file's PR. A state is "designed" when a component preview renders it and marks it `<!-- @state SCR-###/ST-## -->`.
+> Approval = Gate 1 review of this file's PR. A state is "designed" when it is numbered here, listed in the manifest, and drawn as its own frame in the design tool (`WF / SCR-### · <screen> / ST-## <state>`).
 
 |                  |                                                      |
 | ---------------- | ---------------------------------------------------- |
 | **Serves**       | US-### (, US-###)                                    |
 | **Traces to**    | REQ-###, NFR-###                                     |
 | **Surface**      | `apps/ui` `features/<area>` — <route or entry point> |
-| **Primary user** | <the actor from the BRD>                             |
+| **Persona**      | P-# (<research doc>) — or the actor from the BRD     |
+| **Primary job**  | <what this persona is here to get done>              |
+| **Principle**    | PRIN-# — <how it applies here, one clause>           |
 | **Status**       | draft — awaiting designer review                     |
 
 ## Purpose
 
 One or two sentences: what the user is trying to accomplish here, and what "done" looks like for them. If this cannot be written without inventing a business rule, stop and raise it with `/ba`.
+
+## Place in the flow
+
+Where this screen sits in the IA (`inception/design/ia.md`), mirrored in `manifest.json` so an unreachable screen or dead-end journey is caught, not discovered.
+
+- **Reached from:** SCR-###, SCR-### — or `entry` (a root the user lands on directly)
+- **Leads to:** SCR-###, SCR-### (`screens[].links_to` in the manifest)
 
 ## Layout
 
@@ -44,11 +53,11 @@ Numbered like acceptance criteria, and for the same reason: an unnumbered state 
 
 ## Components
 
-| Component | Preview                                           | Notes            |
-| --------- | ------------------------------------------------- | ---------------- |
-| `<name>`  | `inception/design/components/<name>/preview.html` | <states covered> |
+| Component | Used for                        | States it appears in |
+| --------- | ------------------------------- | -------------------- |
+| `<name>`  | <role on this screen>           | ST-##, ST-##         |
 
-Components are declared in `knowledge/traceability/manifest.json` under this screen; `aidlc-check` proves each preview file exists.
+The library components this screen uses, by name. The designer builds them in the tool on the tokens; a component no screen lists is speculative library, not design.
 
 ## Interaction and accessibility
 
@@ -75,4 +84,4 @@ Blocks approval of this screen until each row has a resolution. A conflict resol
 
 ## Designer handoff
 
-Tokens: `inception/design/tokens.json` (W3C DTCG — importable into Figma via Tokens Studio, Penpot, and others). Draw one frame per `ST-##` above; the numbering is the checklist.
+Tokens: `inception/design/tokens.json` (W3C DTCG — importable into Figma via Tokens Studio, Penpot, and others). Draw one frame per `ST-##` above; the numbering is the checklist. Name each frame `WF / SCR-### · <screen> / ST-## <state>` (`HF /` once styled) — the name is the only thing that ties a frame back to this spec. Grid, spacing, and the per-frame checklist: `inception/design/wireframe-rules.md`.
